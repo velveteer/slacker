@@ -1,0 +1,97 @@
+cabal-version:      3.0
+name:               slacker
+version:            0.1.0.0
+category:           Web, Slack, SDK
+synopsis:           Haskell library for the Slack Socket Mode API
+license:            MIT
+license-file:       LICENSE
+author:             Josh Miller <notjoshmiller@gmail.com>
+maintainer:         Josh Miller <notjoshmiller@gmail.com>
+extra-source-files: README.md, CHANGELOG.md
+
+source-repository head
+  type: git
+  location: git@github.com:velveteer/slacker.git
+
+flag strict
+  description: Enable more GHC warnings plus @-Werror@, which turns warnings into errors.
+  default: False
+  manual: True
+
+library 
+  default-extensions: 
+    FlexibleContexts,
+    LambdaCase,
+    OverloadedStrings,
+    DeriveGeneric,
+    DerivingStrategies,
+    DuplicateRecordFields,
+    GeneralizedNewtypeDeriving,
+    PatternSynonyms,
+    RankNTypes,
+    RecordWildCards,
+    TypeApplications,
+    ViewPatterns
+  exposed-modules:
+    Slacker,
+    Slacker.Blocks,
+    Slacker.Config,
+    Slacker.SocketMode,
+    Slacker.SocketMode.Types,
+    Slacker.Web,
+    Slacker.Util
+  build-depends:
+    aeson,
+    base >= 4.7 && < 5,
+    http-client,
+    http-conduit,
+    lens,
+    lens-aeson,
+    monad-logger-aeson,
+    network-uri,
+    stm,
+    stm-chans,
+    text,
+    unliftio-core,
+    unliftio,
+    unordered-containers,
+    websockets,
+    wuss
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  if flag(strict)
+    ghc-options: 
+      -Wall 
+      -Werror 
+      -Wcompat 
+      -Widentities 
+      -Wincomplete-uni-patterns 
+      -Wincomplete-record-updates 
+      -Wmissing-export-lists 
+      -Wno-implicit-prelude 
+      -Wno-safe 
+      -Wno-unsafe 
+      -Wnoncanonical-monad-instances 
+      -Wredundant-constraints 
+      -Wpartial-fields 
+      -Wmissed-specialisations 
+      -Wunused-packages 
+  else
+    ghc-options: -Wall
+
+executable example-bot
+  hs-source-dirs:      example
+  main-is:             Main.hs
+  default-extensions: 
+    LambdaCase,
+    OverloadedStrings
+  default-language:    Haskell2010
+  build-depends:
+    aeson-pretty,
+    base,
+    lens,
+    lens-aeson,
+    slacker,
+    text,
+    transformers,
+    unix
