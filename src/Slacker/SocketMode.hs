@@ -98,7 +98,15 @@ spawnThreadMonitor env = asyncWithUnmask $ \unmask -> unmask loop
       threads <- readTVarIO $ bgThreads env
       (stoppedAsync, x) <- waitAnyCatch (fst <$> threads)
       case x of
-        Left err | Just AsyncCancelled <- fromException err -> pure ()
+        Left err | Just AsyncCancelled <- fromException err
+                 , Just tId <- lookup stoppedAsync threads -> do
+          runStdoutLoggingT
+            . withThreadContext ["threadId" .= tId]
+            . withLogLevel (logLevel cfg)
+            $ logDebug "thread canceled"
+          let newThreads = filter ((/= tId) . snd) threads
+          void . atomically $ swapTVar (bgThreads env) newThreads
+          loop
         Left err | Just tId <- lookup stoppedAsync threads -> do
           shouldRestart <- onException cfg cfg err tId
           if shouldRestart
@@ -138,11 +146,13 @@ handleThreadExceptionSensibly cfg ex tId
       _ ->
         pure False
 
+-- | Initiates a graceful shutdown.
 shutdownSocketMode :: SocketModeEnv -> IO ()
 shutdownSocketMode env = atomically $ putTMVar (shutdownVar env) ()
 
--- | Cancel all background threads, wait for them to finish,
--- and then close the event queue.
+-- | Spawns a thread that waits for the shutdown signal.
+-- When signaled, this cancels all socket threads, waits for them to finish,
+-- and then closes the event queue.
 spawnShutdownHandler :: SocketModeEnv -> IO (Async ())
 spawnShutdownHandler env = asyncWithUnmask $ \_ ->
   runStdoutLoggingT . withLogLevel (logLevel $ slackConfig env) $ do
@@ -153,8 +163,9 @@ spawnShutdownHandler env = asyncWithUnmask $ \_ ->
     traverse_ waitCatch threads
     atomically $ closeTBMQueue (inboundQueue env)
 
--- | Requests a new socket connection from Slack, then blocks on receiving data from that connection.
--- A parsed event is ack'd immediately and inserted into a bounded queue.
+-- | Requests a new socket connection from Slack and blocks on receiving data from that connection.
+-- A socket mode envelope id is used to ack the message immediately, after which the entire value
+-- is inserted into the bounded, closeable event queue.
 -- Connection refreshes are handled by letting the inner loop return, which causes
 -- the outer loop to create a fresh connection.
 -- This should never return unless an IO exception is thrown from the inner or outer loops.
@@ -237,7 +248,9 @@ instance Aeson.ToJSON AckPayload where
     }
 
 ackEnvelopeId :: WS.Connection -> Text -> IO ()
-ackEnvelopeId conn eId = WS.sendTextData conn . toJSONText $ AckPayload eId Nothing
+ackEnvelopeId conn eId =
+  WS.sendTextData conn (toJSONText $ AckPayload eId Nothing)
+    `catch` (throwIO . ConnectionError)
 
 connectionsOpen :: MonadIO m => SocketModeEnv -> m Text
 connectionsOpen env = do

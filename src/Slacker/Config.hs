@@ -20,6 +20,7 @@ import           Control.Monad.Logger.Aeson
   , logError
   , runStdoutLoggingT
   , (.=)
+  , withThreadContext
   )
 import           Data.Text (Text)
 import           GHC.Generics (Generic)
@@ -96,9 +97,12 @@ setLogLevel lvl sc = sc { logLevel = lvl }
 
 -- | Logs the error and initiates a graceful shuts down.
 defaultOnException :: SlackConfig -> SomeException -> Int -> IO Bool
-defaultOnException cfg e _tId = runStdoutLoggingT . withLogLevel (logLevel cfg) $ do
-  logError $ "thread exception" :# ["error" .= show e]
-  pure False
+defaultOnException cfg e tId
+  = runStdoutLoggingT
+  . withLogLevel (logLevel cfg)
+  . withThreadContext ["threadId" .= tId] $ do
+    logError $ "thread exception" :# ["error" .= show e]
+    pure False
 
 withLogLevel :: Maybe LogLevel -> LoggingT m a -> LoggingT m a
 withLogLevel Nothing = filterLogger (\_ _ -> False)
