@@ -1,23 +1,31 @@
 module Slacker.SocketMode.Types
   ( SocketModeEvent(..)
   , EventsApiEnvelope(..)
+  , SlashCommandsEnvelope(..)
+  , SlashCommand(..)
+  , InteractiveEnvelope(..)
   , EventWrapper(..)
   , HelloBody(..)
   , DisconnectBody(..)
+  , AckPayload(..)
+  , pattern Command
   , pattern Event
+  , pattern Interactive
+  , pattern BlockAction
   ) where
 
 import           Control.Lens ((^?))
+import           Data.Foldable (toList)
 import qualified Data.Aeson as Aeson
-import           Data.Aeson.Lens (_String, key)
+import           Data.Aeson.Lens (_Array, _String, key)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           GHC.Generics (Generic)
 
 data SocketModeEvent
   = EventsApi !EventsApiEnvelope
-  | Interactive !Aeson.Value -- TODO
-  | SlashCommands !Aeson.Value -- TODO
+  | SlashCommands !SlashCommandsEnvelope
+  | InteractiveEvent !InteractiveEnvelope
   | Hello !HelloBody
   | Disconnect !DisconnectBody
   deriving stock (Generic, Show, Eq, Ord)
@@ -46,17 +54,46 @@ pattern Event typ event <-
           }
     })
 
+pattern Command :: Text -> SlashCommand -> SocketModeEvent
+pattern Command typ cmd <-
+  SlashCommands (
+    SlashCommandsEnvelope
+    { scePayload =
+        cmd@SlashCommand
+          { scCommand = typ
+          }
+    })
+
+pattern Interactive :: Text -> Aeson.Value -> SocketModeEvent
+pattern Interactive typ val <-
+  InteractiveEvent (
+    InteractiveEnvelope
+      { iePayload = getEvent -> Just (typ, val)
+    })
+
+pattern BlockAction :: Text -> Aeson.Value -> SocketModeEvent
+pattern BlockAction actionId val <-
+  InteractiveEvent (
+    InteractiveEnvelope
+      { iePayload = getEvent -> Just ("block_actions", getAction -> Just (actionId, val))
+    })
+
 getEvent :: Aeson.Value -> Maybe (Text, Aeson.Value)
 getEvent evt =
   (,) <$> evt ^? key "type" . _String
       <*> pure evt
+
+getAction :: Aeson.Value -> Maybe (Text, Aeson.Value)
+getAction evt = do
+  [action] <- toList <$> evt ^? key "actions" . _Array
+  (,) <$> (action ^? key "action_id" . _String) <*> pure evt
 
 instance Aeson.FromJSON SocketModeEvent where
   parseJSON val = flip (Aeson.withObject "SocketModeEvent") val $ \obj -> do
     typ <- obj Aeson..:? "type"
     case typ of
       Just "events_api"     -> EventsApi <$> Aeson.parseJSON val
-      Just "interactive"    -> Interactive <$> Aeson.parseJSON val
+      Just "interactive"    -> InteractiveEvent <$> Aeson.parseJSON val
       Just "slash_commands" -> SlashCommands <$> Aeson.parseJSON val
       Just "hello"          -> Hello <$> Aeson.parseJSON val
       Just "disconnect"     -> Disconnect <$> Aeson.parseJSON val
@@ -76,6 +113,53 @@ instance Aeson.FromJSON EventsApiEnvelope where
   parseJSON
     = Aeson.genericParseJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier = Aeson.camelTo2 '_' . drop 3
+    }
+
+data SlashCommandsEnvelope
+  = SlashCommandsEnvelope
+  { sceAcceptsResponsePayload :: !Bool
+  , sceEnvelopeId             :: !Text
+  , scePayload                :: !SlashCommand
+  } deriving stock (Generic, Show, Eq, Ord)
+
+instance Aeson.FromJSON SlashCommandsEnvelope where
+  parseJSON
+    = Aeson.genericParseJSON Aeson.defaultOptions
+    { Aeson.fieldLabelModifier = Aeson.camelTo2 '_' . drop 3
+    }
+
+data SlashCommand
+  = SlashCommand
+  { scTeamId              :: !Text
+  , scTeamDomain          :: !Text
+  , scChannelId           :: !Text
+  , scChannelName         :: !Text
+  , scUserId              :: !Text
+  , scCommand             :: !Text
+  , scText                :: !Text
+  , scApiAppId            :: !Text
+  , scIsEnterpriseInstall :: !Text
+  , scResponseUrl         :: !Text
+  , scTriggerId           :: !Text
+  } deriving stock (Generic, Show, Eq, Ord)
+
+instance Aeson.FromJSON SlashCommand where
+  parseJSON
+    = Aeson.genericParseJSON Aeson.defaultOptions
+    { Aeson.fieldLabelModifier = Aeson.camelTo2 '_' . drop 2
+    }
+
+data InteractiveEnvelope
+  = InteractiveEnvelope
+  { ieAcceptsResponsePayload :: !Bool
+  , ieEnvelopeId             :: !Text
+  , iePayload                :: !Aeson.Value
+  } deriving stock (Generic, Show, Eq, Ord)
+
+instance Aeson.FromJSON InteractiveEnvelope where
+  parseJSON
+    = Aeson.genericParseJSON Aeson.defaultOptions
+    { Aeson.fieldLabelModifier = Aeson.camelTo2 '_' . drop 2
     }
 
 data EventWrapper
@@ -162,3 +246,16 @@ instance Aeson.FromJSON DebugInfo where
     { Aeson.fieldLabelModifier = Aeson.camelTo2 '_' . drop 2
     }
 
+data AckPayload =
+  AckPayload
+    { envelopeId :: !Text
+    , payload    :: !(Maybe Aeson.Value)
+    }
+  deriving stock (Generic, Eq, Show)
+
+instance Aeson.ToJSON AckPayload where
+  toJSON
+    = Aeson.genericToJSON Aeson.defaultOptions
+    { Aeson.fieldLabelModifier = Aeson.camelTo2 '_'
+    , Aeson.omitNothingFields = True
+    }

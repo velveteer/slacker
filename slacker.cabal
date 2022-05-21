@@ -27,6 +27,7 @@ library
     DerivingStrategies,
     DuplicateRecordFields,
     GeneralizedNewtypeDeriving,
+    MultiParamTypeClasses,
     PatternSynonyms,
     RankNTypes,
     RecordWildCards,

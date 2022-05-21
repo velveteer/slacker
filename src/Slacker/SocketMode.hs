@@ -195,6 +195,14 @@ pollSocket env tId
         ackEnvelopeId conn eId
         atomically $ writeTBMQueue inboundQ val
         loop conn
+      SlashCommands (SlashCommandsEnvelope { sceEnvelopeId = eId }) -> do
+        ackEnvelopeId conn eId
+        atomically $ writeTBMQueue inboundQ val
+        loop conn
+      InteractiveEvent (InteractiveEnvelope { ieEnvelopeId = eId }) -> do
+        ackEnvelopeId conn eId
+        atomically $ writeTBMQueue inboundQ val
+        loop conn
       Hello _ -> do
         void . atomically $ tryTakeTMVar lock
         atomically $ writeTBMQueue inboundQ val
@@ -207,9 +215,6 @@ pollSocket env tId
         unlocked <- atomically $ tryPutTMVar lock ()
         runStdoutLoggingT . withLogLevel (logLevel cfg) $ logDebug "connection refresh requested"
         if unlocked then pure () else loop conn
-      -- TODO Need to handle ack payloads for Interactive and SlashCommands
-      Interactive _   -> loop conn
-      SlashCommands _ -> loop conn
     loop conn = do
       raw <- WS.receiveData conn `catch` (throwIO . ConnectionError)
       either (throwIO . JSONDecodeError) (writeInboundEvent conn) $ Aeson.eitherDecode raw
@@ -232,20 +237,6 @@ handleEvents env fn = getNextEvent env >>= \case
 -- listener threads have been shut down.
 getNextEvent :: MonadIO m => SocketModeEnv -> m (Maybe SocketModeEvent)
 getNextEvent = liftIO . atomically . readTBMQueue . inboundQueue
-
-data AckPayload =
-  AckPayload
-    { envelopeId :: !Text
-    , payload    :: !(Maybe Aeson.Value)
-    }
-  deriving stock (Generic, Eq, Show)
-
-instance Aeson.ToJSON AckPayload where
-  toJSON
-    = Aeson.genericToJSON Aeson.defaultOptions
-    { Aeson.fieldLabelModifier = Aeson.camelTo2 '_'
-    , Aeson.omitNothingFields = True
-    }
 
 ackEnvelopeId :: WS.Connection -> Text -> IO ()
 ackEnvelopeId conn eId =

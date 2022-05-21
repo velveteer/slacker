@@ -13,7 +13,7 @@ This is a work-in-progress, notably it's missing comprehensive types for the lar
 * Handles Slack connection refreshes automatically
 * Structured logging
 * Graceful shutdown of socket mode
-* Format content using Block Kit
+* Format interactive content using Block Kit
 * Basic support for Web API calls
 * Follows the latest Slack API conventions and avoids deprecated objects
 
@@ -41,9 +41,10 @@ See the example app for more.
 ## Roadmap
 
 - [x] Socket Mode Daemon
-- [x] Post Messages via Web API
-- [ ] Interactive events in socket mode
-- [ ] Slash commands in socket mode
+- [x] Post Messages and Responses via Web API
+- [x] Interactive events in socket mode
+- [x] Slash commands in socket mode
+- [ ] Support ack response payloads
 - [ ] Implement More Event Types
 - [ ] Implement More Block Types
 - [ ] Hackage release

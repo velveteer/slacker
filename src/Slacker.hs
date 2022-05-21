@@ -4,11 +4,24 @@ module Slacker
   , handleEvents
   , runSocketMode
   , postMessage
-  , postThreadReply
+  , respondMessage
   , SlackConfig
   , SocketModeEnv(slackConfig)
   , ThreadError(..)
-  , PostMessage(..)
+  , MessagePayload(..)
+  , PostMessagePayload(..)
+  , MessageContent(..)
+  , blocks
+  , blocksWithText
+  , textMessage
+  , ephemeralResponse
+  , nonEphemeralResponse
+  , ephemeralBlocks
+  , nonEphemeralBlocks
+  , ephemeralText
+  , nonEphemeralText
+  , toChannel
+  , toThread
   , defaultSlackConfig
   , setApiToken
   , setAppToken
@@ -21,14 +34,23 @@ module Slacker
   , shutdownSocketMode
   , handleThreadExceptionSensibly
   , SocketModeEvent(..)
+  , pattern Command
   , pattern Event
+  , pattern Interactive
+  , pattern BlockAction
   , EventsApiEnvelope(..)
+  , SlashCommandsEnvelope(..)
+  , SlashCommand(..)
   , HelloBody(..)
   , DisconnectBody(..)
   , Block(..)
+  , ButtonElement
+  , defaultButton
+  , withAccessory
   , imageNoTitle
   , markdownSection
   , markdown
+  , embolden
   , plaintext
   , module Export
   ) where

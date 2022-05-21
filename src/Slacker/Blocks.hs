@@ -1,13 +1,18 @@
 {-# LANGUAGE CPP #-}
 module Slacker.Blocks
   ( Block(..)
-  , ImageBlock(..)
-  , TextObject(..)
-  , embolden
+  , InteractiveElement(..)
+  , ButtonElement
+  , defaultButton
+  , SectionBlock
+  , markdownSection
+  , withAccessory
+  , ImageBlock
   , image
   , imageNoTitle
+  , TextObject
   , markdown
-  , markdownSection
+  , embolden
   , plaintext
   ) where
 
@@ -18,6 +23,7 @@ import qualified Data.Aeson.KeyMap as Aeson
 #else
 import qualified Data.HashMap.Strict as HM
 #endif
+import           Data.List.NonEmpty (NonEmpty)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           GHC.Generics (Generic)
@@ -57,18 +63,18 @@ data ImageBlock
   , ibAltText  :: !Text
   } deriving stock (Generic, Show, Eq, Ord)
 
-image :: TextObject -> Text -> Text -> Block
+image :: TextObject -> Text -> Text -> NonEmpty Block
 image title url alt
-  = Image $ ImageBlock
+  = pure . Image $ ImageBlock
   { ibTitle    = Just title
   , ibBlockId  = Nothing
   , ibImageUrl = url
   , ibAltText  = alt
   }
 
-imageNoTitle :: Text -> Text -> Block
+imageNoTitle :: Text -> Text -> NonEmpty Block
 imageNoTitle url alt
-  = Image $ ImageBlock
+  = pure . Image $ ImageBlock
   { ibTitle    = Nothing
   , ibBlockId  = Nothing
   , ibImageUrl = url
@@ -90,12 +96,21 @@ instance Aeson.FromJSON ImageBlock where
 
 data SectionBlock
   = SectionBlock
-  { sbText    :: !TextObject
-  , sbBlockId :: !(Maybe Text)
+  { sbText      :: !TextObject
+  , sbBlockId   :: !(Maybe Text)
+  , sbFields    :: !(Maybe TextObject)
+  , sbAccessory :: !(Maybe InteractiveElement)
   } deriving stock (Generic, Show, Eq, Ord)
 
-markdownSection :: Text -> Block
-markdownSection txt = Section $ SectionBlock (markdown txt) Nothing
+withAccessory
+  :: InteractiveElement
+  -> Block
+  -> Block
+withAccessory el (Section bl) = Section bl { sbAccessory = Just el }
+withAccessory _el bl = bl
+
+markdownSection :: Text -> NonEmpty Block
+markdownSection txt = pure . Section $ SectionBlock (markdown txt) Nothing Nothing Nothing
 
 instance Aeson.ToJSON SectionBlock where
   toJSON
@@ -144,3 +159,50 @@ instance Aeson.FromJSON TextObject where
       "mrkdwn"     -> MarkdownText <$> Aeson.parseJSON val
       unknown      -> fail $ "Unknown text type: " <> T.unpack unknown
 
+-- TODO More of these
+data InteractiveElement
+  = Button ButtonElement
+  deriving (Generic, Eq, Ord, Show)
+
+instance Aeson.ToJSON InteractiveElement where
+  toJSON (Button b) = toJSONWithTypeField "button" (Aeson.toJSON b)
+
+instance Aeson.FromJSON InteractiveElement where
+  parseJSON val = flip (Aeson.withObject "Element") val $ \obj -> do
+    typ <- obj Aeson..: "type"
+    case typ of
+      "button" -> Button <$> Aeson.parseJSON val
+      unknown  -> fail $ "Unknown element type: " <> T.unpack unknown
+
+data ButtonElement
+  = ButtonElement
+  { bText               :: !TextObject
+  , bActionId           :: !Text
+  , bUrl                :: !(Maybe Text)
+  , bValue              :: !(Maybe Text)
+  , bStyle              :: !(Maybe Text)
+  , bAccessibilityLabel :: !(Maybe Text)
+  } deriving stock (Generic, Show, Eq, Ord)
+
+defaultButton :: Text -> Text -> InteractiveElement
+defaultButton txt actId = Button $ ButtonElement
+  { bText               = plaintext txt
+  , bActionId           = actId
+  , bUrl                = Nothing
+  , bValue              = Nothing
+  , bStyle              = Nothing
+  , bAccessibilityLabel = Nothing
+  }
+
+instance Aeson.ToJSON ButtonElement where
+  toJSON
+    = Aeson.genericToJSON Aeson.defaultOptions
+    { Aeson.fieldLabelModifier = Aeson.camelTo2 '_' . drop 1
+    , Aeson.omitNothingFields = True
+    }
+
+instance Aeson.FromJSON ButtonElement where
+  parseJSON
+    = Aeson.genericParseJSON Aeson.defaultOptions
+    { Aeson.fieldLabelModifier = Aeson.camelTo2 '_' . drop 1
+    }

@@ -1,7 +1,22 @@
 module Slacker.Web
-  ( PostMessage(..)
+  ( MessageContent(..)
+  , blocks
+  , blocksWithText
+  , textMessage
+  -- Response URL
+  , MessagePayload(..)
+  , respondMessage
+  , ephemeralResponse
+  , nonEphemeralResponse
+  , ephemeralBlocks
+  , nonEphemeralBlocks
+  , ephemeralText
+  , nonEphemeralText
+  -- chat.postMessage
+  , PostMessagePayload(..)
   , postMessage
-  , postThreadReply
+  , toChannel
+  , toThread
   , makeSlackPostJSON
   , makeSlackPostJSONNoBody
   ) where
@@ -10,8 +25,9 @@ import           Control.Lens hiding ((??))
 import           Control.Monad (void)
 import           Control.Monad.IO.Unlift (MonadIO, liftIO)
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
 import           Data.Aeson.Lens
-import           Data.List.NonEmpty (NonEmpty(..), nonEmpty)
+import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Maybe (catMaybes)
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -24,101 +40,106 @@ import           UnliftIO.Exception
 import           Slacker.Blocks (Block(..))
 import           Slacker.Config (SlackConfig(..))
 
-data PostMessage
-  = PostMessage
-  { pmChannel  :: !Text
-  , pmThreadTs :: !(Maybe Text)
-  , pmContent  :: !MessageContent
+data MessagePayload
+  = MessagePayload
+  { mpEphemeral :: !Bool
+  , mpContent   :: !MessageContent
   } deriving stock (Generic, Show, Eq, Ord)
 
-instance Aeson.ToJSON PostMessage where
-  toJSON PostMessage{..} = Aeson.object $
+instance Aeson.ToJSON MessagePayload where
+  toJSON MessagePayload{..} = Aeson.object $
     catMaybes
-      [ Just $ "channel" Aeson..= pmChannel
-        , fmap ("thread_ts" Aeson..=) pmThreadTs
-      ] ++ contentFields
-    where
-      contentFields
-        = case pmContent of
-            MessageBlocks blocks mText -> catMaybes
-              [ Just $ "blocks" Aeson..= blocks
-              , fmap ("text" Aeson..=) mText
-              ]
-            MessageText txt ->
-              [ "text" Aeson..= txt ]
+      [ if mpEphemeral
+          then Just ("response_type" Aeson..= Aeson.String "ephemeral")
+          else Nothing
+      ] ++ messageContentFields mpContent
 
-instance Aeson.FromJSON PostMessage where
-  parseJSON = Aeson.withObject "PostMessage" $ \obj -> do
-    mBlocks <- obj Aeson..:? "blocks"
-    PostMessage
-      <$> obj Aeson..: "channel"
-      <*> obj Aeson..: "thread_ts"
-      <*> (case mBlocks of
-            Nothing     -> MessageText <$> obj Aeson..: "text"
-            Just blocks -> MessageBlocks blocks <$> obj Aeson..:? "text")
+data PostMessagePayload
+  = PostMessagePayload
+  { pmpChannel  :: !Text
+  , pmpThreadTs :: !(Maybe Text)
+  , pmpContent  :: !MessageContent
+  } deriving stock (Generic, Show, Eq, Ord)
+
+instance Aeson.ToJSON PostMessagePayload where
+  toJSON PostMessagePayload{..} = Aeson.object $
+    catMaybes
+      [ Just $ "channel" Aeson..= pmpChannel
+      , fmap ("thread_ts" Aeson..=) pmpThreadTs
+      ] ++ messageContentFields pmpContent
+
+toChannel :: Text -> MessageContent -> PostMessagePayload
+toChannel cid = PostMessagePayload cid Nothing
+
+toThread :: Text -> Text -> MessageContent -> PostMessagePayload
+toThread cid ts = PostMessagePayload cid (Just ts)
 
 data MessageContent
-  = MessageBlocks (NonEmpty Block) (Maybe Text)
+  = MessageBlocks (Maybe Text) (NonEmpty Block)
   | MessageText Text
   deriving stock (Show, Eq, Ord)
 
-mkMessageContent :: Text -> [Block] -> MessageContent
-mkMessageContent txt blocks =
-  case nonEmpty blocks of
-    Just blocks' -> MessageBlocks blocks' (Just txt)
-    Nothing      -> MessageText txt
+messageContentFields :: MessageContent -> [Aeson.Pair]
+messageContentFields mc =
+  case mc of
+    MessageBlocks mText neBlocks -> catMaybes
+      [ Just $ "blocks" Aeson..= neBlocks
+      , fmap ("text" Aeson..=) mText
+      ]
+    MessageText txt ->
+      [ "text" Aeson..= txt ]
 
-postThreadReply
+blocks :: NonEmpty Block -> MessageContent
+blocks = MessageBlocks Nothing
+
+blocksWithText :: Text -> NonEmpty Block -> MessageContent
+blocksWithText txt = MessageBlocks (Just txt)
+
+textMessage :: Text -> MessageContent
+textMessage = MessageText
+
+nonEphemeralResponse :: MessageContent -> MessagePayload
+nonEphemeralResponse = MessagePayload False
+
+nonEphemeralBlocks :: NonEmpty Block -> MessagePayload
+nonEphemeralBlocks = nonEphemeralResponse . blocks
+
+nonEphemeralText :: Text -> MessagePayload
+nonEphemeralText = nonEphemeralResponse . textMessage
+
+ephemeralResponse :: MessageContent -> MessagePayload
+ephemeralResponse = MessagePayload True
+
+ephemeralBlocks :: NonEmpty Block -> MessagePayload
+ephemeralBlocks = ephemeralResponse . blocks
+
+ephemeralText :: Text -> MessagePayload
+ephemeralText = ephemeralResponse . textMessage
+
+-- | Respond to a user using the action's response URL.
+-- https://api.slack.com/interactivity/handling#message_responses
+respondMessage
   :: MonadIO m
-  => SlackConfig
-  -> Text
-  -- ^ Channel id
-  -> Text
-  -- ^ ts of another message that we're replying to
-  -> Text
-  -- ^ Message text, usually a fallback if you are providing blocks.
-  -> [Block]
-  -- ^ Slack blocks, you can use them to build nicer responses.
+  => Text
+  -- ^ Response URL from Slack.
+  -> MessagePayload
   -> m ()
-postThreadReply cfg cid ts = postMessageImpl cfg cid (Just ts)
+respondMessage url body = do
+  req <- liftIO $ HTTP.parseRequest $ "POST " <> T.unpack url
+  void . HTTP.httpLBS . HTTP.setRequestBodyJSON body $ req
 
+-- | Use the `chat.postMessage` method to send a message to a particular channel.
 postMessage
   :: MonadIO m
   => SlackConfig
-  -> Text
-  -- ^ Channel id
-  -> Text
-  -- ^ Message text, usually a fallback if you are providing blocks.
-  -> [Block]
-  -- ^ Slack blocks, you can use them to build nicer responses.
+  -> PostMessagePayload
   -> m ()
-postMessage cfg cid = postMessageImpl cfg cid Nothing
-
-postMessageImpl
-  :: MonadIO m
-  => SlackConfig
-  -> Text
-  -- ^ Channel id
-  -> Maybe Text
-  -- ^ optional ts of another message that we're replying to
-  -> Text
-  -- ^ Message text, usually a fallback if you are providing blocks.
-  -> [Block]
-  -- ^ Slack blocks, you can use them to build nicer responses.
-  -> m ()
-postMessageImpl cfg cid ts txt blocks =
+postMessage cfg payload =
   void $
     makeSlackPostJSON
       (slackApiToken cfg)
       "chat.postMessage"
       payload
-  where
-    payload
-      = PostMessage
-      { pmChannel  = cid
-      , pmThreadTs = ts
-      , pmContent  = mkMessageContent txt blocks
-      }
 
 makeSlackPostJSON
   :: (MonadIO m, Aeson.ToJSON val)
