@@ -38,10 +38,9 @@ handler cfg = \case
     let bs = blockResponse "I'm Mr. Meeseeks!" "Look at me!"
     postMessage cfg $ toThread cid ts bs
 
-  Command "/hello-meeseeks" (SlashCommand { scResponseUrl = url}) -> do
+  Command "/hello-meeseeks" (SlashCommand { scResponseUrl = url }) -> do
     respondMessage url . nonEphemeralBlocks $
-      markdownSection
-        "Try clicking this magical button!"
+      markdownSection "Try clicking this magical button!"
         <&> withAccessory (defaultButton "Click me" "button")
 
   BlockAction "button" val -> void . runMaybeT $ do
@@ -51,13 +50,8 @@ handler cfg = \case
   _ -> pure ()
 
 blockResponse :: Text -> Text -> MessageContent
-blockResponse title body = blocks $ titleSection <> bodySection <> image
-  where
-    titleSection
-      = markdownSection $ embolden title
-    bodySection
-      = markdownSection body
-    image
-      = imageNoTitle
-        "https://media.giphy.com/media/XxvBXSD95ty37oRCl6/giphy.gif"
-        "Golf advice"
+blockResponse title body
+  =  blocks
+  $  markdownSection (embolden title)
+  <> markdownSection body
+  <> imageNoTitle "https://media.giphy.com/media/XxvBXSD95ty37oRCl6/giphy.gif" "Golf advice"

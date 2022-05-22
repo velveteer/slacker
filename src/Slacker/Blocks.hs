@@ -102,15 +102,17 @@ data SectionBlock
   , sbAccessory :: !(Maybe InteractiveElement)
   } deriving stock (Generic, Show, Eq, Ord)
 
-withAccessory
-  :: InteractiveElement
-  -> Block
-  -> Block
+withAccessory :: InteractiveElement -> Block -> Block
 withAccessory el (Section bl) = Section bl { sbAccessory = Just el }
 withAccessory _el bl = bl
 
 markdownSection :: Text -> NonEmpty Block
-markdownSection txt = pure . Section $ SectionBlock (markdown txt) Nothing Nothing Nothing
+markdownSection txt = pure . Section $ SectionBlock
+  { sbText      = markdown txt
+  , sbBlockId   = Nothing
+  , sbFields    = Nothing
+  , sbAccessory = Nothing
+  }
 
 instance Aeson.ToJSON SectionBlock where
   toJSON
@@ -184,16 +186,6 @@ data ButtonElement
   , bAccessibilityLabel :: !(Maybe Text)
   } deriving stock (Generic, Show, Eq, Ord)
 
-defaultButton :: Text -> Text -> InteractiveElement
-defaultButton txt actId = Button $ ButtonElement
-  { bText               = plaintext txt
-  , bActionId           = actId
-  , bUrl                = Nothing
-  , bValue              = Nothing
-  , bStyle              = Nothing
-  , bAccessibilityLabel = Nothing
-  }
-
 instance Aeson.ToJSON ButtonElement where
   toJSON
     = Aeson.genericToJSON Aeson.defaultOptions
@@ -206,3 +198,14 @@ instance Aeson.FromJSON ButtonElement where
     = Aeson.genericParseJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier = Aeson.camelTo2 '_' . drop 1
     }
+
+defaultButton :: Text -> Text -> InteractiveElement
+defaultButton txt actId = Button $ ButtonElement
+  { bText               = plaintext txt
+  , bActionId           = actId
+  , bUrl                = Nothing
+  , bValue              = Nothing
+  , bStyle              = Nothing
+  , bAccessibilityLabel = Nothing
+  }
+
