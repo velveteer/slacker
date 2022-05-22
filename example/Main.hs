@@ -35,23 +35,18 @@ handler cfg = \case
     cid <- MaybeT . pure $ evt ^? key "channel" . _String
     ts  <- MaybeT . pure $ evt ^? key "ts" . _String
     msg <- MaybeT . pure $ evt ^? key "text" . _String
-    let bs = blockResponse "I'm Mr. Meeseeks!" "Look at me!"
-    postMessage cfg $ toThread cid ts bs
+    postMessage cfg . toThread cid ts . blocks_ $
+      section_ "You rang?"
+      <> image
+           "https://media.giphy.com/media/BUAxWbT6y0lJC/giphy.gif"
+           "Hello this is dog"
 
-  Command "/hello-meeseeks" (SlashCommand { scResponseUrl = url }) -> do
-    respondMessage url . nonEphemeralBlocks $
-      markdownSection "Try clicking this magical button!"
-        <&> withAccessory (defaultButton "Click me" "button")
+  Command "/magic-button" (SlashCommand { scResponseUrl = url }) -> do
+    respondMessage url . response . blocks_ $
+      section "Try clicking this magical button!" (button "Click me" "magic-action")
 
-  BlockAction "button" val -> void . runMaybeT $ do
+  BlockAction "magic-action" val -> void . runMaybeT $ do
     url <- MaybeT . pure $ val ^? key "response_url" . _String
-    respondMessage url $ nonEphemeralText "You clicked the magic button!"
+    respondMessage url . response $ text "You clicked the magic button!"
 
   _ -> pure ()
-
-blockResponse :: Text -> Text -> MessageContent
-blockResponse title body
-  =  blocks
-  $  markdownSection (embolden title)
-  <> markdownSection body
-  <> imageNoTitle "https://media.giphy.com/media/XxvBXSD95ty37oRCl6/giphy.gif" "Golf advice"

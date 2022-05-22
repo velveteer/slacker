@@ -88,6 +88,7 @@ executable example-bot
     OverloadedStrings
   default-language:    Haskell2010
   build-depends:
+    aeson,
     aeson-pretty,
     base,
     lens,

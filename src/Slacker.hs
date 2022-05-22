@@ -8,18 +8,15 @@ module Slacker
   , SlackConfig
   , SocketModeEnv(slackConfig)
   , ThreadError(..)
-  , MessagePayload(..)
-  , PostMessagePayload(..)
   , MessageContent(..)
   , blocks
-  , blocksWithText
-  , textMessage
-  , ephemeralResponse
-  , nonEphemeralResponse
-  , ephemeralBlocks
-  , nonEphemeralBlocks
-  , ephemeralText
-  , nonEphemeralText
+  , blocksJSON
+  , blocks_
+  , text
+  , MessagePayload(..)
+  , response
+  , ephemeral
+  , PostMessagePayload(..)
   , toChannel
   , toThread
   , defaultSlackConfig
@@ -45,10 +42,10 @@ module Slacker
   , DisconnectBody(..)
   , Block(..)
   , ButtonElement
-  , defaultButton
-  , withAccessory
-  , imageNoTitle
-  , markdownSection
+  , button
+  , image
+  , section
+  , section_
   , markdown
   , embolden
   , plaintext

@@ -1,16 +1,17 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 module Slacker.Blocks
   ( Block(..)
   , InteractiveElement(..)
-  , ButtonElement
-  , defaultButton
-  , SectionBlock
-  , markdownSection
-  , withAccessory
-  , ImageBlock
+  , ButtonElement(..)
+  , button
+  , SectionBlock(..)
+  , section_
+  , section
+  , ImageBlock(..)
   , image
-  , imageNoTitle
-  , TextObject
+  , TextObject(..)
   , markdown
   , embolden
   , plaintext
@@ -63,17 +64,8 @@ data ImageBlock
   , ibAltText  :: !Text
   } deriving stock (Generic, Show, Eq, Ord)
 
-image :: TextObject -> Text -> Text -> NonEmpty Block
-image title url alt
-  = pure . Image $ ImageBlock
-  { ibTitle    = Just title
-  , ibBlockId  = Nothing
-  , ibImageUrl = url
-  , ibAltText  = alt
-  }
-
-imageNoTitle :: Text -> Text -> NonEmpty Block
-imageNoTitle url alt
+image :: Text -> Text -> NonEmpty Block
+image url alt
   = pure . Image $ ImageBlock
   { ibTitle    = Nothing
   , ibBlockId  = Nothing
@@ -102,16 +94,20 @@ data SectionBlock
   , sbAccessory :: !(Maybe InteractiveElement)
   } deriving stock (Generic, Show, Eq, Ord)
 
-withAccessory :: InteractiveElement -> Block -> Block
-withAccessory el (Section bl) = Section bl { sbAccessory = Just el }
-withAccessory _el bl = bl
-
-markdownSection :: Text -> NonEmpty Block
-markdownSection txt = pure . Section $ SectionBlock
+section_ :: Text -> NonEmpty Block
+section_ txt = pure . Section $ SectionBlock
   { sbText      = markdown txt
   , sbBlockId   = Nothing
   , sbFields    = Nothing
   , sbAccessory = Nothing
+  }
+
+section :: Text -> InteractiveElement -> NonEmpty Block
+section txt acc = pure . Section $ SectionBlock
+  { sbText      = markdown txt
+  , sbBlockId   = Nothing
+  , sbFields    = Nothing
+  , sbAccessory = Just acc
   }
 
 instance Aeson.ToJSON SectionBlock where
@@ -199,8 +195,8 @@ instance Aeson.FromJSON ButtonElement where
     { Aeson.fieldLabelModifier = Aeson.camelTo2 '_' . drop 1
     }
 
-defaultButton :: Text -> Text -> InteractiveElement
-defaultButton txt actId = Button $ ButtonElement
+button :: Text -> Text -> InteractiveElement
+button txt actId = Button $ ButtonElement
   { bText               = plaintext txt
   , bActionId           = actId
   , bUrl                = Nothing
