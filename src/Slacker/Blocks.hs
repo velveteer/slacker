@@ -1,8 +1,6 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeFamilies #-}
 module Slacker.Blocks
   ( Block(..)
+  , Blocks
   , InteractiveElement(..)
   , ButtonElement(..)
   , button
@@ -18,31 +16,20 @@ module Slacker.Blocks
   ) where
 
 import qualified Data.Aeson as Aeson
-#if MIN_VERSION_aeson(2,0,0)
-import qualified Data.Aeson.Key as Aeson
-import qualified Data.Aeson.KeyMap as Aeson
-#else
-import qualified Data.HashMap.Strict as HM
-#endif
-import           Data.List.NonEmpty (NonEmpty)
+import           Data.DList.DNonEmpty (DNonEmpty)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           GHC.Generics (Generic)
+
+import Slacker.Util (toJSONWithTypeField)
+
+type Blocks = DNonEmpty Block
 
 -- TODO Lots of block types to model here.
 data Block
   = Image ImageBlock
   | Section SectionBlock
   deriving stock (Generic, Show, Eq, Ord)
-
-toJSONWithTypeField :: Text -> Aeson.Value -> Aeson.Value
-toJSONWithTypeField typ (Aeson.Object obj) =
-#if MIN_VERSION_aeson(2,0,0)
-  Aeson.Object $ Aeson.insert (Aeson.fromText "type") (Aeson.String typ) obj
-#else
-  Aeson.Object $ HM.insert "type" (Aeson.String typ) obj
-#endif
-toJSONWithTypeField _ val = val
 
 instance Aeson.ToJSON Block where
   toJSON (Image b)   = toJSONWithTypeField "image" (Aeson.toJSON b)
@@ -64,7 +51,7 @@ data ImageBlock
   , ibAltText  :: !Text
   } deriving stock (Generic, Show, Eq, Ord)
 
-image :: Text -> Text -> NonEmpty Block
+image :: Text -> Text -> DNonEmpty Block
 image url alt
   = pure . Image $ ImageBlock
   { ibTitle    = Nothing
@@ -94,7 +81,7 @@ data SectionBlock
   , sbAccessory :: !(Maybe InteractiveElement)
   } deriving stock (Generic, Show, Eq, Ord)
 
-section_ :: Text -> NonEmpty Block
+section_ :: Text -> DNonEmpty Block
 section_ txt = pure . Section $ SectionBlock
   { sbText      = markdown txt
   , sbBlockId   = Nothing
@@ -102,7 +89,7 @@ section_ txt = pure . Section $ SectionBlock
   , sbAccessory = Nothing
   }
 
-section :: Text -> InteractiveElement -> NonEmpty Block
+section :: Text -> InteractiveElement -> DNonEmpty Block
 section txt acc = pure . Section $ SectionBlock
   { sbText      = markdown txt
   , sbBlockId   = Nothing
