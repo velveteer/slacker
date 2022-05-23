@@ -1,22 +1,21 @@
 module Slacker.Web
-  (
-  -- Message formatting
+  ( -- * Message formatting
     MessageContent(..)
   , blocks_
   , blocks
   , blocksJSON
   , text
-  -- Response URL
+    -- * Response URL
   , MessagePayload(..)
   , respondMessage
   , response
   , ephemeral
-  -- chat.postMessage
+    -- * chat.postMessage
   , PostMessagePayload(..)
   , postMessage
   , toChannel
   , toThread
-  -- General POST helpers
+    -- * General POST helpers
   , makeSlackPostJSON
   , makeSlackPostJSONNoBody
   ) where

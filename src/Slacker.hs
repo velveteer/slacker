@@ -40,15 +40,33 @@ module Slacker
   , SlashCommand(..)
   , HelloBody(..)
   , DisconnectBody(..)
+  -- * Layout blocks
   , Block(..)
-  , ButtonElement
-  , button
+  , Blocks
+  , HeaderBlock(..)
+  , header
+  , DividerBlock(..)
+  , divider
+  , SectionBlock(..)
+  , sectionText_
+  , sectionText
+  , sectionFields_
+  , sectionFields
+  , sectionTextFields_
+  , sectionTextFields
+  , field
+  , ImageBlock(..)
   , image
-  , section
-  , section_
+  , image_
+  , TextObject(..)
   , markdown
-  , embolden
   , plaintext
+  , embolden
+  , italicize
+  -- * Elements
+  , InteractiveElement(..)
+  , ButtonElement(..)
+  , button
   , module Export
   ) where
 

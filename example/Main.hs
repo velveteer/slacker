@@ -36,14 +36,16 @@ handler cfg = \case
     ts  <- MaybeT . pure $ evt ^? key "ts" . _String
     msg <- MaybeT . pure $ evt ^? key "text" . _String
     postMessage cfg . toThread cid ts . blocks_ $
-      section_ "You rang?"
-      <> image
-           "https://media.giphy.com/media/BUAxWbT6y0lJC/giphy.gif"
-           "Hello this is dog"
+         header "Slack bot summoned"
+      <> divider
+      <> sectionText_ "You rang?"
+      <> sectionFields_ ("*Bold Field*" <> "_Italic Field_")
+      <> image_ "https://media.giphy.com/media/BUAxWbT6y0lJC/giphy.gif" "Hello this is dog"
 
   Command "/magic-button" (SlashCommand { scResponseUrl = url }) -> do
     respondMessage url . response . blocks_ $
-      section "Try clicking this magical button!" (button "Click me" "magic-action")
+      sectionText "Try clicking this magical button!"
+        (button "Click me" "magic-action")
 
   BlockAction "magic-action" val -> void . runMaybeT $ do
     url <- MaybeT . pure $ val ^? key "response_url" . _String
