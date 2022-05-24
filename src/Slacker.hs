@@ -40,37 +40,52 @@ module Slacker
   , SlashCommand(..)
   , HelloBody(..)
   , DisconnectBody(..)
-  -- * Layout blocks
-  , Block(..)
+    -- * Layout blocks
   , Blocks
-  , HeaderBlock(..)
+  , HeaderBlock
   , header
-  , DividerBlock(..)
+  , header_
+  , DividerBlock
   , divider
-  , SectionBlock(..)
-  , sectionText_
-  , sectionText
-  , sectionFields_
-  , sectionFields
-  , sectionTextFields_
-  , sectionTextFields
+  , divider_
+  , ActionsBlock
+  , actions
+  , actions_
+  , ContextBlock
+  , ContextElement
+  , context
+  , context_
+  , contextImage
+  , contextImage_
+  , contextText
+  , SectionBlock
+  , section
+  , section_
+  , sectionNoText
+  , sectionNoText_
+  , Fields
   , field
-  , ImageBlock(..)
+  , ImageBlock
   , image
   , image_
-  , TextObject(..)
+  , TextObject
   , markdown
   , plaintext
   , embolden
   , italicize
-  -- * Elements
-  , InteractiveElement(..)
-  , ButtonElement(..)
+    -- * Elements
+  , Elements
+  , ButtonElement
   , button
+  , button_
+  , ImageElement
+  , imageElement
+  , imageElement_
   , module Export
   ) where
 
 import           Control.Monad.Logger.Aeson as Export
+import           Named as Export
 
 import           Slacker.Blocks
 import           Slacker.Config

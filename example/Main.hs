@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLabels #-}
 module Main where
 
 import           Control.Lens ((^?))
@@ -35,20 +36,25 @@ handler cfg = \case
     cid <- MaybeT . pure $ evt ^? key "channel" . _String
     ts  <- MaybeT . pure $ evt ^? key "ts" . _String
     msg <- MaybeT . pure $ evt ^? key "text" . _String
-    postMessage cfg . toThread cid ts . blocks_ $
-         header "Slack bot summoned"
-      <> divider
-      <> sectionText_ "You rang?"
-      <> sectionFields_ ("*Bold Field*" <> "_Italic Field_")
-      <> image_ "https://media.giphy.com/media/BUAxWbT6y0lJC/giphy.gif" "Hello this is dog"
+    postMessage cfg $ toThread cid ts mentionResponse
 
   Command "/magic-button" (SlashCommand { scResponseUrl = url }) -> do
     respondMessage url . response . blocks_ $
-      sectionText "Try clicking this magical button!"
-        (button "Click me" "magic-action")
+      section
+        ! #text "Try clicking this magical button!"
+        ! #accessory (button_ "Click me" "magic-action")
+        ! defaults
 
   BlockAction "magic-action" val -> void . runMaybeT $ do
     url <- MaybeT . pure $ val ^? key "response_url" . _String
     respondMessage url . response $ text "You clicked the magic button!"
 
   _ -> pure ()
+
+mentionResponse :: MessageContent
+mentionResponse
+  = blocks_
+  $ header_ "Slack bot summoned"
+ <> divider_
+ <> section_ "You rang?"
+ <> image_ "https://media.giphy.com/media/BUAxWbT6y0lJC/giphy.gif" "Hello this is dog"
