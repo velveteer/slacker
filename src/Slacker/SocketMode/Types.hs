@@ -14,13 +14,13 @@ module Slacker.SocketMode.Types
   , pattern BlockAction
   ) where
 
-import           Control.Lens ((^?))
 import           Data.Foldable (toList)
 import qualified Data.Aeson as Aeson
-import           Data.Aeson.Lens (_Array, _String, key)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           GHC.Generics (Generic)
+import           Lens.Micro ((^?))
+import           Lens.Micro.Aeson (_Array, _String, key)
 
 data SocketModeEvent
   = EventsApi !EventsApiEnvelope

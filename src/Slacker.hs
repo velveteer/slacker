@@ -12,7 +12,7 @@ module Slacker
   , blocks
   , blocksJSON
   , blocks_
-  , text
+  , textMessage
   , MessagePayload(..)
   , response
   , ephemeral
@@ -52,19 +52,13 @@ module Slacker
   , actions
   , actions_
   , ContextBlock
-  , ContextElement
+  , ContextElement(..)
   , context
   , context_
-  , contextImage
-  , contextImage_
-  , contextText
   , SectionBlock
+  , field
   , section
   , section_
-  , sectionNoText
-  , sectionNoText_
-  , Fields
-  , field
   , ImageBlock
   , image
   , image_
@@ -79,13 +73,13 @@ module Slacker
   , button
   , button_
   , ImageElement
-  , imageElement
-  , imageElement_
+  , imageE
+  , imageE_
   , module Export
   ) where
 
 import           Control.Monad.Logger.Aeson as Export
-import           Named as Export
+import           Data.Default as Export
 
 import           Slacker.Blocks
 import           Slacker.Config

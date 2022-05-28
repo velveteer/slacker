@@ -1,9 +1,9 @@
 module Slacker.Blocks.Elements.TextObject
-  ( TextObject
+  ( TextObject(..)
   , MarkdownTextObject(..)
   , PlainTextObject(..)
-  , markdown
-  , plaintext
+  , markdownObj
+  , plaintextObj
   , plaintext_
   , embolden
   , italicize
@@ -24,7 +24,7 @@ instance Aeson.ToJSON TextObject where
   toJSON (MarkdownText mtxt) = Aeson.toJSON mtxt
 
 instance IsString TextObject where
-  fromString = markdown . fromString
+  fromString = markdownObj . fromString
 
 instance Semigroup TextObject where
   PlainText a <> PlainText b = PlainText $ a <> b
@@ -54,17 +54,17 @@ instance Aeson.ToJSON MarkdownTextObject where
     , "text" Aeson..= txt
     ]
 
-markdown :: Text -> TextObject
-markdown = MarkdownText . MarkdownTextObject
+markdownObj :: Text -> TextObject
+markdownObj = MarkdownText . MarkdownTextObject
 
-plaintext :: Text -> TextObject
-plaintext = PlainText . PlainTextObject
+plaintextObj :: Text -> TextObject
+plaintextObj = PlainText . PlainTextObject
 
 plaintext_ :: Text -> PlainTextObject
 plaintext_ = PlainTextObject
 
 embolden :: Text -> TextObject
-embolden txt = markdown $ "*" <> txt <> "*"
+embolden txt = markdownObj $ "*" <> txt <> "*"
 
 italicize :: Text -> TextObject
-italicize txt = markdown $ "_" <> txt <> "_"
+italicize txt = markdownObj $ "_" <> txt <> "_"

@@ -1,15 +1,14 @@
-{-# LANGUAGE OverloadedLabels #-}
 module Main where
 
-import           Control.Lens ((^?))
 import           Control.Monad (void)
 import           Control.Monad.Trans.Maybe (MaybeT(..), runMaybeT)
-import           Data.Aeson.Lens
 import           Data.Function ((&))
-import           Data.Functor ((<&>))
+import           Data.Generics.Labels ()
 import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Maybe (fromMaybe)
 import           Data.Text (Text)
+import           Lens.Micro ((.~), (?~), (^?))
+import           Lens.Micro.Aeson (_String, key)
 import qualified System.Posix.Signals as Signals
 
 import           Slacker
@@ -36,25 +35,22 @@ handler cfg = \case
     cid <- MaybeT . pure $ evt ^? key "channel" . _String
     ts  <- MaybeT . pure $ evt ^? key "ts" . _String
     msg <- MaybeT . pure $ evt ^? key "text" . _String
-    postMessage cfg $ toThread cid ts mentionResponse
+    postMessage cfg . toThread cid ts . blocks_ $ do
+      header_ "Slack bot summoned"
+      divider_
+      section_ "You rang?"
+      image_ "https://media.giphy.com/media/BUAxWbT6y0lJC/giphy.gif" "Hello this is dog"
 
   Command "/magic-button" (SlashCommand { scResponseUrl = url }) -> do
-    respondMessage url . response . blocks_ $
-      section
-        ! #text "Try clicking this magical button!"
-        ! #accessory (button_ "Click me" "magic-action")
-        ! defaults
+    respondMessage url . response . blocks_ .
+      section_ $ do
+        "Try clicking this magical button!"
+        button (def & #text .~ "Click me"
+                    & #action_id .~ "magic-action"
+                    & #style ?~ "danger")
 
   BlockAction "magic-action" val -> void . runMaybeT $ do
     url <- MaybeT . pure $ val ^? key "response_url" . _String
-    respondMessage url . response $ text "You clicked the magic button!"
+    respondMessage url "You clicked the magic button!"
 
   _ -> pure ()
-
-mentionResponse :: MessageContent
-mentionResponse
-  = blocks_
-  $ header_ "Slack bot summoned"
- <> divider_
- <> section_ "You rang?"
- <> image_ "https://media.giphy.com/media/BUAxWbT6y0lJC/giphy.gif" "Hello this is dog"

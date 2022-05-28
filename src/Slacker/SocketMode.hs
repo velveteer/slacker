@@ -11,17 +11,17 @@ module Slacker.SocketMode
   ) where
 
 import           Control.Concurrent.STM.TBMQueue
-import           Control.Lens ((^?))
 import           Control.Monad (void)
 import           Control.Monad.IO.Unlift (MonadIO, liftIO)
 import           Control.Monad.Logger.Aeson
 import qualified Data.Aeson as Aeson
-import           Data.Aeson.Lens
 import           Data.Foldable (for_, traverse_)
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           GHC.Generics (Generic)
 import           GHC.IO.Exception
+import           Lens.Micro ((^?))
+import           Lens.Micro.Aeson (_String, key)
 import qualified Network.URI as URI
 import qualified Network.WebSockets as WS
 import           UnliftIO.Async
