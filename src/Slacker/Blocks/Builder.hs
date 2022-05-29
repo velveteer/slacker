@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Slacker.Blocks.Builder
   ( Blocks
@@ -22,14 +23,21 @@ import qualified Data.Aeson as Aeson
 import           Data.Default (Default(..))
 import qualified Data.List.NonEmpty as NE
 import           Data.Text (Text)
+import           Data.WorldPeace
 
-import           Slacker.Blocks.Actions (ActionsBlock(..))
-import           Slacker.Blocks.Context (ContextBlock(..), ContextElement(..))
+import           Slacker.Blocks.Actions (ActionsBlock(..), ActionsElements, asAction)
+import qualified Slacker.Blocks.Actions as Actions
+import           Slacker.Blocks.Context (ContextBlock(..), ContextElements, asContext)
+import qualified Slacker.Blocks.Context as Context
 import           Slacker.Blocks.Divider (DividerBlock(..))
+import qualified Slacker.Blocks.Divider as Divider
 import           Slacker.Blocks.Elements
 import           Slacker.Blocks.Header (HeaderBlock(..))
+import qualified Slacker.Blocks.Header as Header
 import           Slacker.Blocks.Image (ImageBlock(..))
-import           Slacker.Blocks.Section (SectionBlock(..), asAccessory)
+import qualified Slacker.Blocks.Image as Image
+import           Slacker.Blocks.Section (SectionAccessory, SectionBlock(..), asAccessory)
+import qualified Slacker.Blocks.Section as Section
 
 data BlockM a
   = Section SectionBlock a
@@ -94,40 +102,40 @@ blockValue = \case
 
 withBlockId :: Text -> Blocks -> Blocks
 withBlockId bid = \case
-  Section b _ -> Section (b { block_id = Just bid }) ()
-  Header b _  -> Header (b { block_id = Just bid }) ()
-  Context b _ -> Context (b { block_id = Just bid }) ()
-  Actions b _ -> Actions (b { block_id = Just bid }) ()
-  Divider b _ -> Divider (b { block_id = Just bid }) ()
-  Image b _   -> Image (b { block_id = Just bid }) ()
+  Section b _ -> Section (b { Section.block_id = Just bid }) ()
+  Header b _  -> Header (b { Header.block_id = Just bid }) ()
+  Context b _ -> Context (b { Context.block_id = Just bid }) ()
+  Actions b _ -> Actions (b { Actions.block_id = Just bid }) ()
+  Divider b _ -> Divider (b { Divider.block_id = Just bid }) ()
+  Image b _   -> Image (b { Image.block_id = Just bid }) ()
   Append a b  -> Append a (withBlockId bid b)
   Empty b     -> Empty b
 
 section :: SectionBlock -> Blocks
 section s = Section s ()
 
-section_ :: Elements -> Blocks
+section_ :: (Contains i (SectionField ': SectionAccessory)) => Elements i -> Blocks
 section_ els = Section (go els def) ()
   where
-    go :: ElementM b -> SectionBlock -> SectionBlock
-    go (TextObj t _) = \b -> b{ text = t }
+    go :: ElementM i b -> SectionBlock -> SectionBlock
+    go (TextObj t _) = \b -> b{ Section.text = t }
     go (Button bb _) = \b -> b{ accessory = Just $ asAccessory bb }
     go (ImageE i _) = \b -> b{ accessory = Just $ asAccessory i }
     go (Field f _)   = \b -> b{ fields = Just $ maybe (pure f) (f NE.<|) (fields b) }
-    go (EAppend x y) = go x . go y
+    -- Last element of the do block gets to be the lone accessory
+    go (EAppend x y) = go y . go x
     go (EEmpty _) = id
 
 context :: ContextBlock -> Blocks
 context c = Context c ()
 
-context_ :: Elements -> Blocks
+context_ :: (Contains i ContextElements) => Elements i -> Blocks
 context_ els = Context (go els def) ()
   where
-    go :: ElementM b -> ContextBlock -> ContextBlock
-    go (TextObj t _) = \b -> b{ elements = ContextText t : elements (b :: ContextBlock) }
-    go (ImageE i _) = \b -> b{ elements = ContextImage i : elements (b :: ContextBlock) }
+    go :: ElementM i b -> ContextBlock -> ContextBlock
+    go (TextObj t _) = \b -> b{ Context.elements = asContext t : Context.elements b }
+    go (ImageE i _) = \b -> b{ Context.elements = asContext i : Context.elements b }
     go (EAppend x y) = go x . go y
-    -- TODO Can the compiler enforce this?
     go (Field _ _) = id
     go (Button _ _) = id
     go (EEmpty _) = id
@@ -159,8 +167,16 @@ image_ url alt
 actions :: ActionsBlock -> Blocks
 actions a = Actions a ()
 
-actions_ :: Elements -> Blocks
-actions_ els = Actions (ActionsBlock els Nothing) ()
+actions_ :: Contains i ActionsElements => Elements i -> Blocks
+actions_ els = Actions (go els def) ()
+  where
+    go :: ElementM i b -> ActionsBlock -> ActionsBlock
+    go (Button i _)  = \b -> b{ Actions.elements = asAction i : Actions.elements b }
+    go (EAppend x y) = go y . go x
+    go (ImageE _ _)  = id
+    go (Field _ _)   = id
+    go (EEmpty _)    = id
+    go (TextObj _ _) = id
 
 divider :: DividerBlock -> Blocks
 divider d = Divider d ()

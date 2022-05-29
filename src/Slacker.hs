@@ -51,12 +51,13 @@ module Slacker
   , ActionsBlock
   , actions
   , actions_
+  , asAction
   , ContextBlock
-  , ContextElement(..)
+  , asContext
   , context
   , context_
   , SectionBlock
-  , field
+  , asAccessory
   , section
   , section_
   , ImageBlock
@@ -75,7 +76,10 @@ module Slacker
   , ImageElement
   , imageE
   , imageE_
+  , SectionField
+  , field
   , module Export
+  , IxMonad(..)
   ) where
 
 import           Control.Monad.Logger.Aeson as Export

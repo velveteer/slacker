@@ -1,3 +1,6 @@
+{-# LANGUAGE QualifiedDo #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Main where
 
 import           Control.Monad (void)
@@ -12,6 +15,7 @@ import           Lens.Micro.Aeson (_String, key)
 import qualified System.Posix.Signals as Signals
 
 import           Slacker
+import qualified Slacker as S
 
 main :: IO ()
 main = do
@@ -43,11 +47,9 @@ handler cfg = \case
 
   Command "/magic-button" (SlashCommand { scResponseUrl = url }) -> do
     respondMessage url . response . blocks_ .
-      section_ $ do
+      section_ $ S.do
         "Try clicking this magical button!"
-        button (def & #text .~ "Click me"
-                    & #action_id .~ "magic-action"
-                    & #style ?~ "danger")
+        button_ "Click me" "magic-action"
 
   BlockAction "magic-action" val -> void . runMaybeT $ do
     url <- MaybeT . pure $ val ^? key "response_url" . _String

@@ -24,5 +24,5 @@ instance Aeson.ToJSON DividerBlock where
   toJSON
     = toJSONWithTypeField "divider"
     . Aeson.genericToJSON Aeson.defaultOptions
-    { Aeson.omitNothingFields  = True
+    { Aeson.omitNothingFields = True
     }

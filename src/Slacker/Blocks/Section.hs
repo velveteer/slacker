@@ -1,5 +1,6 @@
 module Slacker.Blocks.Section
   ( SectionBlock(..)
+  , SectionAccessory
   , asAccessory
   ) where
 
@@ -17,13 +18,14 @@ data SectionBlock
   = SectionBlock
   { text      :: !TextObject
   , block_id  :: !(Maybe Text)
-  , fields    :: !(Maybe (NonEmpty TextObject))
+  , fields    :: !(Maybe (NonEmpty SectionField))
   , accessory :: !(Maybe (OpenUnion SectionAccessory))
   } deriving stock (Generic)
 
 type SectionAccessory
   = '[ ButtonElement
      , ImageElement
+     , TextObject
      ]
 
 instance Default SectionBlock where
