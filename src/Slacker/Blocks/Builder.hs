@@ -6,7 +6,6 @@
 module Slacker.Blocks.Builder
   ( Blocks
   , AllBlocks
-  , ($>>)
   , blocksToUnion
   , blocksToValues
   , actions
@@ -52,11 +51,6 @@ data BlockM i a where
   Append :: BlockM as b -> BlockM bs a -> BlockM (as ++ bs) a
 
 type Blocks i = BlockM i ()
-
--- | Build up blocks in sequence using this operator.
--- Alternatively, enable QualifiedDo and use do syntax to sequence blocks.
-($>>) :: BlockM as b -> BlockM bs a -> BlockM (as ++ bs) a
-($>>) = Append
 
 instance IxAppend BlockM where
   type Unit BlockM = '[]
@@ -113,8 +107,8 @@ section_ els = Section (go els def) ()
     go (Button bb _) = \b -> b{ accessory = Just $ asAccessory bb }
     go (ImageE i _) = \b -> b{ accessory = Just $ asAccessory i }
     go (Field f _)   = \b -> b{ fields = Just $ maybe (pure f) (f NE.<|) (fields b) }
-    -- Last element of the do block gets to be the lone accessory
-    -- TODO Could enforce this at the type level.
+    -- Each accessory in the sequence overrides the next.
+    -- TODO Could enforce only one accessory per section at the type level.
     go (EAppend x y) = go y . go x
 
 context :: ContextBlock -> Blocks '[ContextBlock]

@@ -5,7 +5,6 @@
 module Slacker.Blocks.Elements.Builder
   ( Elements
   , ElementM(..)
-  , (*>>)
   , SectionField
   , elementsToValues
   , button
@@ -35,12 +34,6 @@ data ElementM i a where
   EAppend :: ElementM as b -> ElementM bs a -> ElementM (as ++ bs) a
 
 type Elements i = ElementM i ()
-
--- | Build up elements in sequence using this operator.
--- Alternatively, enable QualifiedDo and use do syntax to sequence elements.
--- The order of elements will matter for most layout blocks.
-(*>>) :: ElementM as b -> ElementM bs a -> ElementM (as ++ bs) a
-(*>>) = EAppend
 
 instance IxAppend ElementM where
   type Unit ElementM = '[]

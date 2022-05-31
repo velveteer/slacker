@@ -72,7 +72,6 @@ module Slacker
   , italicize
     -- * Elements
   , Elements
-  , (*>>)
   , ButtonElement
   , button
   , button_
@@ -83,6 +82,7 @@ module Slacker
   , field
   , module Export
   , IxAppend(..)
+  , (!>>)
   ) where
 
 import           Control.Monad.Logger.Aeson as Export
