@@ -38,6 +38,7 @@ library
   exposed-modules:
     Slacker,
     Slacker.Blocks,
+    Slacker.Blocks.Append,
     Slacker.Blocks.Builder,
     Slacker.Blocks.Actions,
     Slacker.Blocks.Context,

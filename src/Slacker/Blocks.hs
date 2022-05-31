@@ -3,6 +3,7 @@ module Slacker.Blocks
   ) where
 
 import Slacker.Blocks.Actions as Export
+import Slacker.Blocks.Append as Export
 import Slacker.Blocks.Builder as Export
 import Slacker.Blocks.Context as Export
 import Slacker.Blocks.Divider as Export

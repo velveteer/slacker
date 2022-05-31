@@ -4,6 +4,10 @@
 
 module Slacker.Blocks.Builder
   ( Blocks
+  , AllBlocks
+  , ($>>)
+  , blocksToUnion
+  , blocksToValues
   , actions
   , actions_
   , context
@@ -16,48 +20,76 @@ module Slacker.Blocks.Builder
   , header_
   , image
   , image_
-  , withBlockId
   ) where
 
 import qualified Data.Aeson as Aeson
 import           Data.Default (Default(..))
+import           Data.Kind (Type)
 import qualified Data.List.NonEmpty as NE
 import           Data.Text (Text)
 import           Data.WorldPeace
 
-import           Slacker.Blocks.Actions (ActionsBlock(..), ActionsElements, asAction)
+import           Slacker.Blocks.Actions (ActionsBlock(..), ActionsElementTypes, asAction)
 import qualified Slacker.Blocks.Actions as Actions
-import           Slacker.Blocks.Context (ContextBlock(..), ContextElements, asContext)
+import           Slacker.Blocks.Append
+import           Slacker.Blocks.Context (ContextBlock(..), ContextElementTypes, asContext)
 import qualified Slacker.Blocks.Context as Context
 import           Slacker.Blocks.Divider (DividerBlock(..))
-import qualified Slacker.Blocks.Divider as Divider
 import           Slacker.Blocks.Elements
 import           Slacker.Blocks.Header (HeaderBlock(..))
-import qualified Slacker.Blocks.Header as Header
 import           Slacker.Blocks.Image (ImageBlock(..))
-import qualified Slacker.Blocks.Image as Image
-import           Slacker.Blocks.Section (SectionAccessory, SectionBlock(..), asAccessory)
+import           Slacker.Blocks.Section (SectionAccessoryTypes, SectionBlock(..), asAccessory)
 import qualified Slacker.Blocks.Section as Section
 
-data BlockM a
-  = Section SectionBlock a
-  | Header HeaderBlock a
-  | Context ContextBlock a
-  | Divider DividerBlock a
-  | Image ImageBlock a
-  | Actions ActionsBlock a
-  | forall b. Append (BlockM b) (BlockM a)
-  | Empty a
+data BlockM i a where
+  Section :: SectionBlock -> a -> BlockM '[SectionBlock] a
+  Header :: HeaderBlock -> a -> BlockM '[HeaderBlock] a
+  Context :: ContextBlock -> a -> BlockM '[ContextBlock] a
+  Divider :: DividerBlock -> a -> BlockM '[DividerBlock] a
+  Image :: ImageBlock -> a -> BlockM '[ImageBlock] a
+  Actions :: ActionsBlock -> a -> BlockM '[ActionsBlock] a
+  Append :: BlockM as b -> BlockM bs a -> BlockM (as ++ bs) a
 
-type Blocks = BlockM ()
+type Blocks i = BlockM i ()
 
-instance Aeson.ToJSON (BlockM ()) where
+-- | Build up blocks in sequence using this operator.
+-- Alternatively, enable QualifiedDo and use do syntax to sequence blocks.
+($>>) :: BlockM as b -> BlockM bs a -> BlockM (as ++ bs) a
+($>>) = Append
+
+instance IxAppend BlockM where
+  type Unit BlockM = '[]
+  type Plus BlockM i j = i ++ j
+  (>>) = Append
+
+instance (i ~ '[Type]) => Aeson.ToJSON (BlockM i ()) where
   toJSON bs = Aeson.toJSON $ blocksToValues bs []
 
-blocksToValues :: Blocks -> [Aeson.Value] -> [Aeson.Value]
+type AllBlocks
+  = '[ SectionBlock
+     , HeaderBlock
+     , ContextBlock
+     , DividerBlock
+     , ImageBlock
+     , ActionsBlock
+     ]
+
+blocksToUnion :: Blocks i -> [OpenUnion AllBlocks] -> [OpenUnion AllBlocks]
+blocksToUnion = go
+  where
+    go :: BlockM i b -> [OpenUnion AllBlocks] -> [OpenUnion AllBlocks]
+    go (Section b _) = (openUnionLift b :)
+    go (Header b _)  = (openUnionLift b :)
+    go (Context b _) = (openUnionLift b :)
+    go (Actions b _) = (openUnionLift b :)
+    go (Divider b _) = (openUnionLift b :)
+    go (Image b _)   = (openUnionLift b :)
+    go (Append x y)  = go x . go y
+
+blocksToValues :: Blocks i -> [Aeson.Value] -> [Aeson.Value]
 blocksToValues = go
   where
-    go :: BlockM b -> [Aeson.Value] -> [Aeson.Value]
+    go :: BlockM i b -> [Aeson.Value] -> [Aeson.Value]
     go (Section b _) = (Aeson.toJSON b :)
     go (Header b _)  = (Aeson.toJSON b :)
     go (Context b _) = (Aeson.toJSON b :)
@@ -65,56 +97,14 @@ blocksToValues = go
     go (Divider b _) = (Aeson.toJSON b :)
     go (Image b _)   = (Aeson.toJSON b :)
     go (Append x y)  = go x . go y
-    go (Empty _ )    = id
 
-instance Semigroup (BlockM a) where
-  x <> y = Append x y
-
-instance Functor BlockM where
-  fmap f x = Append x (Empty (f (blockValue x)))
-
-instance Applicative BlockM where
-  pure x = Empty x
-  {-# INLINE pure #-}
-  (<*>) x y = Append (Append x y) (Empty (blockValue x (blockValue y)))
-  {-# INLINE (<*>) #-}
-  (*>) = Append
-  {-# INLINE (*>) #-}
-
-instance Monad BlockM where
-  return = pure
-  {-# INLINE return #-}
-  (>>) = (*>)
-  {-# INLINE (>>) #-}
-  b >>= f = Append b (f (blockValue b))
-  {-# INLINE (>>=) #-}
-
-blockValue :: BlockM a -> a
-blockValue = \case
-  Section _ x -> x
-  Header _ x  -> x
-  Context _ x -> x
-  Actions _ x -> x
-  Divider _ x -> x
-  Image _ x   -> x
-  Append _ x  -> blockValue x
-  Empty x     -> x
-
-withBlockId :: Text -> Blocks -> Blocks
-withBlockId bid = \case
-  Section b _ -> Section (b { Section.block_id = Just bid }) ()
-  Header b _  -> Header (b { Header.block_id = Just bid }) ()
-  Context b _ -> Context (b { Context.block_id = Just bid }) ()
-  Actions b _ -> Actions (b { Actions.block_id = Just bid }) ()
-  Divider b _ -> Divider (b { Divider.block_id = Just bid }) ()
-  Image b _   -> Image (b { Image.block_id = Just bid }) ()
-  Append a b  -> Append a (withBlockId bid b)
-  Empty b     -> Empty b
-
-section :: SectionBlock -> Blocks
+section :: SectionBlock -> Blocks '[SectionBlock]
 section s = Section s ()
 
-section_ :: (Contains i (SectionField ': SectionAccessory)) => Elements i -> Blocks
+section_
+  :: (Contains i (TextObject ': SectionField ': SectionAccessoryTypes))
+  => Elements i
+  -> Blocks '[SectionBlock]
 section_ els = Section (go els def) ()
   where
     go :: ElementM i b -> SectionBlock -> SectionBlock
@@ -123,27 +113,28 @@ section_ els = Section (go els def) ()
     go (ImageE i _) = \b -> b{ accessory = Just $ asAccessory i }
     go (Field f _)   = \b -> b{ fields = Just $ maybe (pure f) (f NE.<|) (fields b) }
     -- Last element of the do block gets to be the lone accessory
+    -- TODO Could enforce this at the type level.
     go (EAppend x y) = go y . go x
-    go (EEmpty _) = id
 
-context :: ContextBlock -> Blocks
+context :: ContextBlock -> Blocks '[ContextBlock]
 context c = Context c ()
 
-context_ :: (Contains i ContextElements) => Elements i -> Blocks
+context_ :: (Contains i ContextElementTypes) => Elements i -> Blocks '[ContextBlock]
 context_ els = Context (go els def) ()
   where
     go :: ElementM i b -> ContextBlock -> ContextBlock
-    go (TextObj t _) = \b -> b{ Context.elements = asContext t : Context.elements b }
-    go (ImageE i _) = \b -> b{ Context.elements = asContext i : Context.elements b }
+    go (TextObj t _) =
+      \b -> b{ Context.elements = asContext t : Context.elements b }
+    go (ImageE i _) =
+      \b -> b{ Context.elements = asContext i : Context.elements b }
     go (EAppend x y) = go x . go y
     go (Field _ _) = id
     go (Button _ _) = id
-    go (EEmpty _) = id
 
-header :: HeaderBlock -> Blocks
+header :: HeaderBlock -> Blocks '[HeaderBlock]
 header h = Header h ()
 
-header_ :: Text -> Blocks
+header_ :: Text -> Blocks '[HeaderBlock]
 header_ txt
   = Header
   (HeaderBlock
@@ -151,10 +142,10 @@ header_ txt
   , text     = plaintext_ txt
   }) ()
 
-image :: ImageBlock -> Blocks
+image :: ImageBlock -> Blocks '[ImageBlock]
 image el = Image el ()
 
-image_ :: Text -> Text -> Blocks
+image_ :: Text -> Text -> Blocks '[ImageBlock]
 image_ url alt
   = Image
   (ImageBlock
@@ -164,10 +155,10 @@ image_ url alt
   , alt_text  = alt
   }) ()
 
-actions :: ActionsBlock -> Blocks
+actions :: ActionsBlock -> Blocks '[ActionsBlock]
 actions a = Actions a ()
 
-actions_ :: Contains i ActionsElements => Elements i -> Blocks
+actions_ :: Contains i ActionsElementTypes => Elements i -> Blocks '[ActionsBlock]
 actions_ els = Actions (go els def) ()
   where
     go :: ElementM i b -> ActionsBlock -> ActionsBlock
@@ -175,11 +166,10 @@ actions_ els = Actions (go els def) ()
     go (EAppend x y) = go y . go x
     go (ImageE _ _)  = id
     go (Field _ _)   = id
-    go (EEmpty _)    = id
     go (TextObj _ _) = id
 
-divider :: DividerBlock -> Blocks
+divider :: DividerBlock -> Blocks '[DividerBlock]
 divider d = Divider d ()
 
-divider_ :: Blocks
+divider_ :: Blocks '[DividerBlock]
 divider_ = Divider (DividerBlock Nothing) ()

@@ -1,6 +1,7 @@
 module Slacker.Blocks.Context
   ( ContextBlock(..)
-  , ContextElements
+  , ContextElement(..)
+  , ContextElementTypes
   , asContext
   ) where
 
@@ -15,11 +16,20 @@ import           Slacker.Util (toJSONWithTypeField)
 
 data ContextBlock
   = ContextBlock
-  { elements :: ![OpenUnion ContextElements]
+  { elements :: ![ContextElement]
   , block_id :: !(Maybe Text)
-  } deriving stock (Generic, Show, Eq, Ord)
+  } deriving stock (Generic)
 
-type ContextElements = '[ImageElement, TextObject]
+newtype ContextElement = ContextElement { unContextElements :: OpenUnion ContextElementTypes }
+  deriving newtype (Aeson.ToJSON)
+
+type ContextElementTypes
+  = '[ ImageElement
+     , TextObject
+     ]
+
+asContext :: forall a. IsMember a ContextElementTypes => a -> ContextElement
+asContext = ContextElement . openUnionLift
 
 instance Aeson.ToJSON ContextBlock where
   toJSON
@@ -34,6 +44,3 @@ instance Default ContextBlock where
     { elements = mempty
     , block_id = Nothing
     }
-
-asContext :: forall a as. IsMember a as => a -> OpenUnion as
-asContext = openUnionLift

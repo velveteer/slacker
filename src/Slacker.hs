@@ -64,12 +64,15 @@ module Slacker
   , image
   , image_
   , TextObject
+  , markdownObj
+  , plaintextObj
   , markdown
   , plaintext
   , embolden
   , italicize
     -- * Elements
   , Elements
+  , (*>>)
   , ButtonElement
   , button
   , button_
@@ -79,7 +82,7 @@ module Slacker
   , SectionField
   , field
   , module Export
-  , IxMonad(..)
+  , IxAppend(..)
   ) where
 
 import           Control.Monad.Logger.Aeson as Export

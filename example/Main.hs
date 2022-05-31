@@ -39,7 +39,7 @@ handler cfg = \case
     cid <- MaybeT . pure $ evt ^? key "channel" . _String
     ts  <- MaybeT . pure $ evt ^? key "ts" . _String
     msg <- MaybeT . pure $ evt ^? key "text" . _String
-    postMessage cfg . toThread cid ts . blocks_ $ do
+    postMessage cfg . toThread cid ts . blocks_ $ S.do
       header_ "Slack bot summoned"
       divider_
       section_ "You rang?"

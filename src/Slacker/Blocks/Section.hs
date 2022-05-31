@@ -1,6 +1,7 @@
 module Slacker.Blocks.Section
   ( SectionBlock(..)
-  , SectionAccessory
+  , SectionAccessory(..)
+  , SectionAccessoryTypes
   , asAccessory
   ) where
 
@@ -19,14 +20,19 @@ data SectionBlock
   { text      :: !TextObject
   , block_id  :: !(Maybe Text)
   , fields    :: !(Maybe (NonEmpty SectionField))
-  , accessory :: !(Maybe (OpenUnion SectionAccessory))
+  , accessory :: !(Maybe SectionAccessory)
   } deriving stock (Generic)
 
-type SectionAccessory
+type SectionAccessoryTypes
   = '[ ButtonElement
      , ImageElement
-     , TextObject
      ]
+
+newtype SectionAccessory = SectionAccessory { unSectionAccessory :: OpenUnion SectionAccessoryTypes }
+  deriving newtype (Aeson.ToJSON)
+
+asAccessory :: forall a. IsMember a SectionAccessoryTypes => a -> SectionAccessory
+asAccessory = SectionAccessory . openUnionLift
 
 instance Default SectionBlock where
   def
@@ -43,6 +49,3 @@ instance Aeson.ToJSON SectionBlock where
     . Aeson.genericToJSON Aeson.defaultOptions
     { Aeson.omitNothingFields = True
     }
-
-asAccessory :: forall a as. IsMember a as => a -> OpenUnion as
-asAccessory = openUnionLift
