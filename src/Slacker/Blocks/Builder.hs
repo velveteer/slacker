@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS -Wno-redundant-constraints #-}
 
 module Slacker.Blocks.Builder
   ( Blocks
