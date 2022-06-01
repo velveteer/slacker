@@ -1,5 +1,6 @@
 module Slacker.Blocks.Header
   ( HeaderBlock(..)
+  , defaultHeader
   ) where
 
 import qualified Data.Aeson as Aeson
@@ -14,6 +15,13 @@ data HeaderBlock
   { block_id :: !(Maybe Text)
   , text     :: !PlainTextObject
   } deriving stock (Generic, Show, Eq, Ord)
+
+defaultHeader :: Text -> HeaderBlock
+defaultHeader txt
+  = HeaderBlock
+  { block_id = Nothing
+  , text = plaintext_ txt
+  }
 
 instance Aeson.ToJSON HeaderBlock where
   toJSON

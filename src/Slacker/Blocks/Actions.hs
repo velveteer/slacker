@@ -2,11 +2,11 @@ module Slacker.Blocks.Actions
   ( ActionsBlock(..)
   , ActionsElement(..)
   , ActionsElementTypes
+  , defaultActions
   , asAction
   ) where
 
 import qualified Data.Aeson as Aeson
-import           Data.Default (Default(..))
 import           Data.Text (Text)
 import           Data.WorldPeace
 import           GHC.Generics (Generic)
@@ -20,22 +20,12 @@ data ActionsBlock
   , block_id :: !(Maybe Text)
   } deriving stock (Generic)
 
-type ActionsElementTypes
-  = '[ ButtonElement
-     ]
-
-newtype ActionsElement = ActionsElement { unActionElement :: OpenUnion ActionsElementTypes }
-  deriving newtype (Aeson.ToJSON)
-
-asAction :: forall a. IsMember a ActionsElementTypes => a -> ActionsElement
-asAction = ActionsElement . openUnionLift
-
-instance Default ActionsBlock where
-  def
-    = ActionsBlock
-    { elements = []
-    , block_id = Nothing
-    }
+defaultActions :: ActionsBlock
+defaultActions
+  = ActionsBlock
+  { elements = []
+  , block_id = Nothing
+  }
 
 instance Aeson.ToJSON ActionsBlock where
   toJSON
@@ -43,3 +33,17 @@ instance Aeson.ToJSON ActionsBlock where
     . Aeson.genericToJSON Aeson.defaultOptions
     { Aeson.omitNothingFields = True
     }
+
+type ActionsElementTypes
+  = '[ ButtonElement
+     ]
+
+instance HasButton ActionsElement where
+  button = asAction
+
+newtype ActionsElement = ActionsElement { unActionElement :: OpenUnion ActionsElementTypes }
+  deriving newtype (Aeson.ToJSON)
+
+asAction :: forall a. IsMember a ActionsElementTypes => a -> ActionsElement
+asAction = ActionsElement . openUnionLift
+

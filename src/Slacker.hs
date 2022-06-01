@@ -42,51 +42,54 @@ module Slacker
   , DisconnectBody(..)
     -- * Layout blocks
   , Blocks
-  , HeaderBlock
+  , HeaderBlock(..)
+  , defaultHeader
   , header
   , header_
-  , DividerBlock
+  , DividerBlock(..)
+  , defaultDivider
   , divider
   , divider_
-  , ActionsBlock
+  , ActionsBlock(..)
+  , defaultActions
   , actions
   , actions_
   , asAction
-  , ContextBlock
+  , ContextBlock(..)
+  , defaultContext
   , asContext
   , context
   , context_
-  , SectionBlock
+  , SectionBlock(..)
+  , defaultSection
   , asAccessory
   , section
   , section_
-  , ImageBlock
-  , image
-  , image_
+  , SectionField
+  , field
+  , ImageBlock(..)
+  , defaultImageBlock
   , TextObject
-  , markdownObj
-  , plaintextObj
   , markdown
   , plaintext
   , embolden
   , italicize
     -- * Elements
   , Elements
-  , ButtonElement
+  , ButtonElement(..)
+  , defaultButton
   , button
   , button_
-  , ImageElement
-  , imageE
-  , imageE_
-  , SectionField
-  , field
+  , ImageElement(..)
+  , image
+  , image_
+  , defaultImage
   , module Export
   , IxAppend(..)
   , (!>>)
   ) where
 
 import           Control.Monad.Logger.Aeson as Export
-import           Data.Default as Export
 
 import           Slacker.Blocks
 import           Slacker.Config

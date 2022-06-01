@@ -1,9 +1,10 @@
 module Slacker.Blocks.Elements.Button
   ( ButtonElement(..)
+  , HasButton(..)
+  , defaultButton
   ) where
 
 import qualified Data.Aeson as Aeson
-import           Data.Default (Default(..))
 import           Data.Text (Text)
 import           GHC.Generics (Generic)
 
@@ -20,16 +21,21 @@ data ButtonElement
   , accessibility_label :: !(Maybe Text)
   } deriving stock (Generic, Show, Eq, Ord)
 
-instance Default ButtonElement where
-  def
-    = ButtonElement
-    { text                = ""
-    , action_id           = ""
-    , url                 = Nothing
-    , value               = Nothing
-    , style               = Nothing
-    , accessibility_label = Nothing
-    }
+class HasButton a where
+  button :: ButtonElement -> a
+  button_ :: Text -> Text -> a
+  button_ txt actId = button $ defaultButton txt actId
+
+defaultButton :: Text -> Text -> ButtonElement
+defaultButton txt actId
+  = ButtonElement
+  { text                = plaintext_ txt
+  , action_id           = actId
+  , url                 = Nothing
+  , value               = Nothing
+  , style               = Nothing
+  , accessibility_label = Nothing
+  }
 
 instance Aeson.ToJSON ButtonElement where
   toJSON

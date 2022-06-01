@@ -18,27 +18,24 @@ module Slacker.Blocks.Builder
   , section_
   , header
   , header_
-  , image
-  , image_
   ) where
 
 import qualified Data.Aeson as Aeson
-import           Data.Default (Default(..))
 import           Data.Kind (Type)
 import qualified Data.List.NonEmpty as NE
 import           Data.Text (Text)
 import           Data.WorldPeace
 
-import           Slacker.Blocks.Actions (ActionsBlock(..), ActionsElementTypes, asAction)
+import           Slacker.Blocks.Actions
 import qualified Slacker.Blocks.Actions as Actions
 import           Slacker.Blocks.Append
-import           Slacker.Blocks.Context (ContextBlock(..), ContextElementTypes, asContext)
+import           Slacker.Blocks.Context
 import qualified Slacker.Blocks.Context as Context
-import           Slacker.Blocks.Divider (DividerBlock(..))
+import           Slacker.Blocks.Divider
 import           Slacker.Blocks.Elements
-import           Slacker.Blocks.Header (HeaderBlock(..))
-import           Slacker.Blocks.Image (ImageBlock(..))
-import           Slacker.Blocks.Section (SectionAccessoryTypes, SectionBlock(..), asAccessory)
+import           Slacker.Blocks.Header
+import           Slacker.Blocks.Image
+import           Slacker.Blocks.Section
 import qualified Slacker.Blocks.Section as Section
 
 data BlockM i a where
@@ -59,6 +56,10 @@ instance IxAppend BlockM where
 
 instance (i ~ '[Type]) => Aeson.ToJSON (BlockM i ()) where
   toJSON bs = Aeson.toJSON $ blocksToValues bs []
+
+instance (i ~ '[ImageBlock], a ~ ()) => HasImage ImageBlock (BlockM i a) where
+  image el = Image el ()
+  image_ url alt = image $ defaultImageBlock url alt
 
 type AllBlocks
   = '[ SectionBlock
@@ -100,12 +101,12 @@ section_
   :: (Contains i (TextObject ': SectionField ': SectionAccessoryTypes))
   => Elements i
   -> Blocks '[SectionBlock]
-section_ els = Section (go els def) ()
+section_ els = Section (go els (defaultSection "")) ()
   where
     go :: ElementM i b -> SectionBlock -> SectionBlock
     go (TextObj t _) = \b -> b{ Section.text = t }
-    go (Button bb _) = \b -> b{ accessory = Just $ asAccessory bb }
-    go (ImageE i _) = \b -> b{ accessory = Just $ asAccessory i }
+    go (Button bb _) = \b -> b{ accessory = asAccessory bb }
+    go (ImageE i _)  = \b -> b{ accessory = asAccessory i }
     go (Field f _)   = \b -> b{ fields = Just $ maybe (pure f) (f NE.<|) (fields b) }
     -- Each accessory in the sequence overrides the next.
     -- TODO Could enforce only one accessory per section at the type level.
@@ -115,7 +116,7 @@ context :: ContextBlock -> Blocks '[ContextBlock]
 context c = Context c ()
 
 context_ :: (Contains i ContextElementTypes) => Elements i -> Blocks '[ContextBlock]
-context_ els = Context (go els def) ()
+context_ els = Context (go els defaultContext) ()
   where
     go :: ElementM i b -> ContextBlock -> ContextBlock
     go (TextObj t _) =
@@ -123,38 +124,20 @@ context_ els = Context (go els def) ()
     go (ImageE i _) =
       \b -> b{ Context.elements = asContext i : Context.elements b }
     go (EAppend x y) = go x . go y
-    go (Field _ _) = id
-    go (Button _ _) = id
+    go (Field _ _)   = id
+    go (Button _ _)  = id
 
 header :: HeaderBlock -> Blocks '[HeaderBlock]
 header h = Header h ()
 
 header_ :: Text -> Blocks '[HeaderBlock]
-header_ txt
-  = Header
-  (HeaderBlock
-  { block_id = Nothing
-  , text     = plaintext_ txt
-  }) ()
-
-image :: ImageBlock -> Blocks '[ImageBlock]
-image el = Image el ()
-
-image_ :: Text -> Text -> Blocks '[ImageBlock]
-image_ url alt
-  = Image
-  (ImageBlock
-  { title     = Nothing
-  , block_id  = Nothing
-  , image_url = url
-  , alt_text  = alt
-  }) ()
+header_ txt = Header (defaultHeader txt) ()
 
 actions :: ActionsBlock -> Blocks '[ActionsBlock]
 actions a = Actions a ()
 
 actions_ :: Contains i ActionsElementTypes => Elements i -> Blocks '[ActionsBlock]
-actions_ els = Actions (go els def) ()
+actions_ els = Actions (go els defaultActions) ()
   where
     go :: ElementM i b -> ActionsBlock -> ActionsBlock
     go (Button i _)  = \b -> b{ Actions.elements = asAction i : Actions.elements b }
@@ -167,4 +150,4 @@ divider :: DividerBlock -> Blocks '[DividerBlock]
 divider d = Divider d ()
 
 divider_ :: Blocks '[DividerBlock]
-divider_ = Divider (DividerBlock Nothing) ()
+divider_ = Divider defaultDivider ()

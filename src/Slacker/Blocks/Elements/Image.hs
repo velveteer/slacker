@@ -1,9 +1,12 @@
+{-# LANGUAGE FunctionalDependencies #-}
+
 module Slacker.Blocks.Elements.Image
   ( ImageElement(..)
+  , HasImage(..)
+  , defaultImage
   ) where
 
 import qualified Data.Aeson as Aeson
-import           Data.Default (Default(..))
 import           Data.Text (Text)
 import           GHC.Generics (Generic)
 
@@ -15,12 +18,20 @@ data ImageElement
   , image_url :: !Text
   } deriving stock (Generic, Show, Eq, Ord)
 
-instance Default ImageElement where
-  def
-    = ImageElement
-    { alt_text  = ""
-    , image_url = ""
-    }
+class HasImage arg res | res -> arg where
+  image :: arg -> res
+  image_ :: Text -> Text -> res
+
+instance HasImage ImageElement ImageElement where
+  image = id
+  image_ url alt = defaultImage url alt
+
+defaultImage :: Text -> Text -> ImageElement
+defaultImage url alt
+  = ImageElement
+  { alt_text  = alt
+  , image_url = url
+  }
 
 instance Aeson.ToJSON ImageElement where
   toJSON

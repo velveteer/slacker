@@ -2,6 +2,7 @@ module Slacker.Blocks.Elements.TextObject
   ( TextObject(..)
   , MarkdownTextObject(..)
   , PlainTextObject(..)
+  , HasText(..)
   , markdownObj
   , plaintextObj
   , plaintext_
@@ -18,6 +19,14 @@ data TextObject
   = PlainText !PlainTextObject
   | MarkdownText !MarkdownTextObject
   deriving stock (Generic, Show, Eq, Ord)
+
+class HasText a where
+  markdown :: Text -> a
+  plaintext :: Text -> a
+
+instance HasText TextObject where
+  markdown txt  = markdownObj txt
+  plaintext txt = plaintextObj txt
 
 instance Aeson.ToJSON TextObject where
   toJSON (PlainText ptxt) = Aeson.toJSON ptxt

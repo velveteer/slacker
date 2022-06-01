@@ -5,25 +5,17 @@
 module Slacker.Blocks.Elements.Builder
   ( Elements
   , ElementM(..)
-  , SectionField
   , elementsToValues
-  , button
-  , button_
-  , imageE
-  , imageE_
-  , markdown
-  , plaintext
-  , field
   ) where
 
 import qualified Data.Aeson as Aeson
 import           Data.Kind (Type)
-import           Data.Text (Text)
 import           GHC.Exts (IsString(..))
 
 import           Slacker.Blocks.Append
-import           Slacker.Blocks.Elements.Button (ButtonElement(..))
-import           Slacker.Blocks.Elements.Image (ImageElement(..))
+import           Slacker.Blocks.Section
+import           Slacker.Blocks.Elements.Button
+import           Slacker.Blocks.Elements.Image
 import           Slacker.Blocks.Elements.TextObject
 
 data ElementM i a where
@@ -46,6 +38,20 @@ instance (i ~ '[Type]) => Aeson.ToJSON (ElementM i ()) where
 instance (i ~ '[TextObject], a ~ ()) => IsString (ElementM i a) where
   fromString el = TextObj (fromString el) ()
 
+instance (i ~ '[TextObject], a ~ ()) => HasText (ElementM i a) where
+  markdown txt = TextObj (markdownObj txt) ()
+  plaintext txt = TextObj (plaintextObj txt) ()
+
+instance (i ~ '[ButtonElement], a ~ ()) => HasButton (ElementM i a) where
+  button el = Button el ()
+
+instance (i ~ '[ImageElement], a ~ ()) => HasImage ImageElement (ElementM i a) where
+  image el = ImageE el ()
+  image_ url alt = image $ defaultImage url alt
+
+instance (i ~ '[SectionField], a ~ ()) => HasField (ElementM i a) where
+  field txt = Field (SectionField txt) ()
+
 elementsToValues :: Elements i -> [Aeson.Value] -> [Aeson.Value]
 elementsToValues = go
   where
@@ -55,42 +61,4 @@ elementsToValues = go
     go (TextObj e _) = (Aeson.toJSON e :)
     go (Field e _)   = (Aeson.toJSON e :)
     go (EAppend x y) = go x . go y
-
-button :: ButtonElement -> Elements '[ButtonElement]
-button el = Button el ()
-
-button_ :: Text -> Text -> Elements '[ButtonElement]
-button_ txt actId
-  = Button
-  (ButtonElement
-  { text                = plaintext_ txt
-  , action_id           = actId
-  , url                 = Nothing
-  , value               = Nothing
-  , style               = Nothing
-  , accessibility_label = Nothing
-  }) ()
-
-imageE :: ImageElement -> Elements '[ImageElement]
-imageE i = ImageE i ()
-
-imageE_ :: Text -> Text -> Elements '[ImageElement]
-imageE_ url alt
-  = ImageE
-  (ImageElement
-  { alt_text  = alt
-  , image_url = url
-  }) ()
-
-markdown :: Text -> Elements '[TextObject]
-markdown txt = TextObj (markdownObj txt) ()
-
-plaintext :: Text -> Elements '[TextObject]
-plaintext txt = TextObj (plaintextObj txt) ()
-
-newtype SectionField = SectionField TextObject
-  deriving newtype (Aeson.ToJSON)
-
-field :: TextObject -> Elements '[SectionField]
-field txt = Field (SectionField txt) ()
 
