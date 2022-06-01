@@ -22,7 +22,6 @@ module Slacker.Blocks.Builder
 
 import qualified Data.Aeson as Aeson
 import           Data.Kind (Type)
-import qualified Data.List.NonEmpty as NE
 import           Data.Text (Text)
 import           Data.WorldPeace
 
@@ -98,16 +97,16 @@ section :: SectionBlock -> Blocks '[SectionBlock]
 section s = Section s ()
 
 section_
-  :: (Contains i (TextObject ': SectionField ': SectionAccessoryTypes))
+  :: (Contains i (TextObject ': SectionFields ': SectionAccessoryTypes))
   => Elements i
   -> Blocks '[SectionBlock]
 section_ els = Section (go els (defaultSection "")) ()
   where
     go :: ElementM i b -> SectionBlock -> SectionBlock
     go (TextObj t _) = \b -> b{ Section.text = t }
-    go (Button bb _) = \b -> b{ accessory = asAccessory bb }
-    go (ImageE i _)  = \b -> b{ accessory = asAccessory i }
-    go (Field f _)   = \b -> b{ fields = Just $ maybe (pure f) (f NE.<|) (fields b) }
+    go (Button bb _) = \b -> b{ accessory = Just $ asAccessory bb }
+    go (ImageE i _)  = \b -> b{ accessory = Just $ asAccessory i }
+    go (Fields fs _) = \b -> b{ fields = Just fs }
     -- Each accessory in the sequence overrides the next.
     -- TODO Could enforce only one accessory per section at the type level.
     go (EAppend x y) = go y . go x
@@ -124,7 +123,7 @@ context_ els = Context (go els defaultContext) ()
     go (ImageE i _) =
       \b -> b{ Context.elements = asContext i : Context.elements b }
     go (EAppend x y) = go x . go y
-    go (Field _ _)   = id
+    go (Fields _ _)  = id
     go (Button _ _)  = id
 
 header :: HeaderBlock -> Blocks '[HeaderBlock]
@@ -143,7 +142,7 @@ actions_ els = Actions (go els defaultActions) ()
     go (Button i _)  = \b -> b{ Actions.elements = asAction i : Actions.elements b }
     go (EAppend x y) = go y . go x
     go (ImageE _ _)  = id
-    go (Field _ _)   = id
+    go (Fields _ _)  = id
     go (TextObj _ _) = id
 
 divider :: DividerBlock -> Blocks '[DividerBlock]

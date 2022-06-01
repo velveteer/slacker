@@ -1,19 +1,21 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NoFieldSelectors #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Slacker.Blocks.Section
   ( SectionBlock(..)
   , SectionAccessory(..)
   , SectionAccessoryTypes
-  , SectionField(..)
-  , HasField(..)
+  , SectionFields(..)
+  , HasFields(..)
   , asAccessory
   , defaultSection
   ) where
 
 import qualified Data.Aeson as Aeson
-import           Data.List.NonEmpty (NonEmpty)
 import           Data.Text (Text)
 import           Data.WorldPeace
+import           GHC.Exts (IsList(..))
 import           GHC.Generics (Generic)
 
 import           Slacker.Blocks.Elements.Button
@@ -25,8 +27,8 @@ data SectionBlock
   = SectionBlock
   { text      :: !TextObject
   , block_id  :: !(Maybe Text)
-  , fields    :: !(Maybe (NonEmpty SectionField))
-  , accessory :: !SectionAccessory
+  , fields    :: !(Maybe SectionFields)
+  , accessory :: !(Maybe SectionAccessory)
   } deriving stock (Generic)
 
 defaultSection :: TextObject -> SectionBlock
@@ -35,7 +37,7 @@ defaultSection txt
   { text      = txt
   , block_id  = Nothing
   , fields    = Nothing
-  , accessory = SectionAccessory Nothing
+  , accessory = Nothing
   }
 
 instance Aeson.ToJSON SectionBlock where
@@ -52,7 +54,7 @@ type SectionAccessoryTypes
 
 newtype SectionAccessory
   = SectionAccessory
-  { unSectionAccessory :: Maybe (OpenUnion SectionAccessoryTypes)
+  { unSectionAccessory :: OpenUnion SectionAccessoryTypes
   } deriving newtype (Aeson.ToJSON)
 
 instance HasButton SectionAccessory where
@@ -63,14 +65,19 @@ instance HasImage ImageElement SectionAccessory where
   image_ url alt = image $ defaultImage url alt
 
 asAccessory :: forall a. IsMember a SectionAccessoryTypes => a -> SectionAccessory
-asAccessory = SectionAccessory . pure . openUnionLift
+asAccessory = SectionAccessory . openUnionLift
 
-newtype SectionField = SectionField TextObject
+newtype SectionFields = SectionFields [TextObject]
   deriving newtype (Aeson.ToJSON)
 
-class HasField a where
-  field :: TextObject -> a
+instance IsList SectionFields where
+  type Item SectionFields  = TextObject
+  fromList                 = SectionFields
+  toList (SectionFields l) = l
 
-instance HasField SectionField where
-  field = SectionField
+class HasFields a where
+  fields :: [TextObject] -> a
+
+instance HasFields SectionFields where
+  fields = SectionFields
 

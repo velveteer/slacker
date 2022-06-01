@@ -21,7 +21,7 @@ import           Slacker.Blocks.Elements.TextObject
 data ElementM i a where
   Button  :: ButtonElement -> a -> ElementM '[ButtonElement] a
   TextObj :: TextObject -> a -> ElementM '[TextObject] a
-  Field   :: SectionField -> a -> ElementM '[SectionField] a
+  Fields  :: SectionFields -> a -> ElementM '[SectionFields] a
   ImageE  :: ImageElement -> a -> ElementM '[ImageElement] a
   EAppend :: ElementM as b -> ElementM bs a -> ElementM (as ++ bs) a
 
@@ -49,8 +49,8 @@ instance (i ~ '[ImageElement], a ~ ()) => HasImage ImageElement (ElementM i a) w
   image el = ImageE el ()
   image_ url alt = image $ defaultImage url alt
 
-instance (i ~ '[SectionField], a ~ ()) => HasField (ElementM i a) where
-  field txt = Field (SectionField txt) ()
+instance (i ~ '[SectionFields], a ~ ()) => HasFields (ElementM i a) where
+  fields txts = Fields (SectionFields txts) ()
 
 elementsToValues :: Elements i -> [Aeson.Value] -> [Aeson.Value]
 elementsToValues = go
@@ -59,6 +59,6 @@ elementsToValues = go
     go (Button e _)  = (Aeson.toJSON e :)
     go (ImageE e _)  = (Aeson.toJSON e :)
     go (TextObj e _) = (Aeson.toJSON e :)
-    go (Field e _)   = (Aeson.toJSON e :)
+    go (Fields e _)  = (Aeson.toJSON e :)
     go (EAppend x y) = go x . go y
 
