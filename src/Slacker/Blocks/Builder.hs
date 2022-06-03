@@ -115,13 +115,13 @@ context :: ContextBlock -> Blocks '[ContextBlock]
 context c = Context c ()
 
 context_ :: (Contains i ContextElementTypes) => Elements i -> Blocks '[ContextBlock]
-context_ els = Context (go els defaultContext) ()
+context_ els = Context (go els emptyContext) ()
   where
     go :: ElementM i b -> ContextBlock -> ContextBlock
     go (TextObj t _) =
-      \b -> b{ Context.elements = asContext t : Context.elements b }
+      \b -> b{ Context.elements = asContext t <> Context.elements b }
     go (ImageE i _) =
-      \b -> b{ Context.elements = asContext i : Context.elements b }
+      \b -> b{ Context.elements = asContext i <> Context.elements b }
     go (EAppend x y) = go x . go y
     go (Fields _ _)  = id
     go (Button _ _)  = id

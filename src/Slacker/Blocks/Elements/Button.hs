@@ -26,6 +26,9 @@ class HasButton a where
   button_ :: Text -> Text -> a
   button_ txt actId = button $ defaultButton txt actId
 
+instance HasButton ButtonElement where
+  button = id
+
 defaultButton :: Text -> Text -> ButtonElement
 defaultButton txt actId
   = ButtonElement

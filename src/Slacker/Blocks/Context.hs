@@ -1,14 +1,18 @@
 module Slacker.Blocks.Context
   ( ContextBlock(..)
-  , ContextElement(..)
+  , ContextElements(..)
+  , ContextElement
   , ContextElementTypes
   , asContext
   , defaultContext
+  , emptyContext
   ) where
 
 import qualified Data.Aeson as Aeson
+import           Data.DList (DList(..))
 import           Data.Text (Text)
 import           Data.WorldPeace
+import           GHC.Exts (IsString(..))
 import           GHC.Generics (Generic)
 
 import           Slacker.Blocks.Elements.Image
@@ -17,29 +21,45 @@ import           Slacker.Util (toJSONWithTypeField)
 
 data ContextBlock
   = ContextBlock
-  { elements :: ![ContextElement]
+  { elements :: !ContextElements
   , block_id :: !(Maybe Text)
   } deriving stock (Generic)
 
-defaultContext :: ContextBlock
-defaultContext
+newtype ContextElements = ContextElements (DList ContextElement)
+  deriving newtype (Aeson.ToJSON, Semigroup)
+
+instance IsString ContextElements where
+  fromString s = ContextElements . pure $ fromString s
+
+defaultContext :: ContextElements -> ContextBlock
+defaultContext els
   = ContextBlock
-  { elements = mempty
+  { elements = els
   , block_id = Nothing
   }
 
-asContext :: forall a. IsMember a ContextElementTypes => a -> ContextElement
-asContext = ContextElement . openUnionLift
+emptyContext :: ContextBlock
+emptyContext
+  = ContextBlock
+  { elements = ContextElements mempty
+  , block_id = Nothing
+  }
 
-newtype ContextElement = ContextElement { unContextElements :: OpenUnion ContextElementTypes }
+asContext :: forall a. IsMember a ContextElementTypes => a -> ContextElements
+asContext = ContextElements . pure . ContextElement . openUnionLift
+
+newtype ContextElement = ContextElement (OpenUnion ContextElementTypes)
   deriving newtype (Aeson.ToJSON)
 
-instance HasText ContextElement where
-  markdown txt = ContextElement . openUnionLift $ markdownObj txt
-  plaintext txt = ContextElement . openUnionLift $ plaintextObj txt
+instance IsString ContextElement where
+  fromString s = ContextElement . openUnionLift $ markdownObj (fromString s)
 
-instance HasImage ImageElement ContextElement where
-  image = ContextElement . openUnionLift
+instance HasText ContextElements where
+  markdown txt = ContextElements . pure . ContextElement . openUnionLift $ markdownObj txt
+  plaintext txt = ContextElements . pure . ContextElement . openUnionLift $ plaintextObj txt
+
+instance HasImage ImageElement ContextElements where
+  image = ContextElements . pure . ContextElement . openUnionLift
   image_ url alt = image $ defaultImage url alt
 
 type ContextElementTypes
