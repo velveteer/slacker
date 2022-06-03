@@ -41,7 +41,7 @@ type ActionsElementTypes
 instance HasButton ActionsElement where
   button = asAction
 
-newtype ActionsElement = ActionsElement { unActionElement :: OpenUnion ActionsElementTypes }
+newtype ActionsElement = ActionsElement (OpenUnion ActionsElementTypes)
   deriving newtype (Aeson.ToJSON)
 
 asAction :: forall a. IsMember a ActionsElementTypes => a -> ActionsElement

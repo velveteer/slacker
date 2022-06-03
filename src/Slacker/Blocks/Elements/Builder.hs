@@ -50,7 +50,7 @@ instance (i ~ '[ImageElement], a ~ ()) => HasImage ImageElement (ElementM i a) w
   image_ url alt = image $ defaultImage url alt
 
 instance (i ~ '[SectionFields], a ~ ()) => HasFields (ElementM i a) where
-  fields txts = Fields (SectionFields txts) ()
+  fields txts = Fields txts ()
 
 elementsToValues :: Elements i -> [Aeson.Value] -> [Aeson.Value]
 elementsToValues = go

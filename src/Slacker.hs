@@ -65,7 +65,8 @@ module Slacker
   , asAccessory
   , section
   , section_
-  , SectionFields
+  , SectionFields(..)
+  , field
   , fields
   , ImageBlock(..)
   , defaultImageBlock

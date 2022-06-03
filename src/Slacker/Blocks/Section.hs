@@ -7,15 +7,17 @@ module Slacker.Blocks.Section
   , SectionAccessory(..)
   , SectionAccessoryTypes
   , SectionFields(..)
+  , field
   , HasFields(..)
   , asAccessory
   , defaultSection
   ) where
 
 import qualified Data.Aeson as Aeson
+import           Data.DList (DList(..))
 import           Data.Text (Text)
 import           Data.WorldPeace
-import           GHC.Exts (IsList(..))
+import           GHC.Exts (IsString(..))
 import           GHC.Generics (Generic)
 
 import           Slacker.Blocks.Elements.Button
@@ -67,17 +69,18 @@ instance HasImage ImageElement SectionAccessory where
 asAccessory :: forall a. IsMember a SectionAccessoryTypes => a -> SectionAccessory
 asAccessory = SectionAccessory . openUnionLift
 
-newtype SectionFields = SectionFields [TextObject]
-  deriving newtype (Aeson.ToJSON)
+newtype SectionFields = SectionFields (DList TextObject)
+  deriving newtype (Aeson.ToJSON, Semigroup)
 
-instance IsList SectionFields where
-  type Item SectionFields  = TextObject
-  fromList                 = SectionFields
-  toList (SectionFields l) = l
+instance IsString SectionFields where
+  fromString s = SectionFields . pure $ fromString s
+
+field :: TextObject -> SectionFields
+field = SectionFields . pure
 
 class HasFields a where
-  fields :: [TextObject] -> a
+  fields :: SectionFields -> a
 
 instance HasFields SectionFields where
-  fields = SectionFields
+  fields = id
 
