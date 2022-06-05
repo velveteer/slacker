@@ -4,7 +4,7 @@
 
 module Slacker.Blocks.Elements.Builder
   ( Elements
-  , ElementM(..)
+  , Elements(..)
   , elementsToValues
   ) where
 
@@ -18,47 +18,43 @@ import           Slacker.Blocks.Elements.Button
 import           Slacker.Blocks.Elements.Image
 import           Slacker.Blocks.Elements.TextObject
 
-data ElementM i a where
-  Button  :: ButtonElement -> a -> ElementM '[ButtonElement] a
-  TextObj :: TextObject -> a -> ElementM '[TextObject] a
-  Fields  :: SectionFields -> a -> ElementM '[SectionFields] a
-  ImageE  :: ImageElement -> a -> ElementM '[ImageElement] a
-  EAppend :: ElementM as b -> ElementM bs a -> ElementM (as ++ bs) a
+data Elements i where
+  Button  :: ButtonElement -> Elements '[ButtonElement]
+  TextObj :: TextObject -> Elements '[TextObject]
+  Fields  :: SectionFields -> Elements '[SectionFields]
+  ImageE  :: ImageElement -> Elements '[ImageElement]
+  EAppend :: Elements as -> Elements bs -> Elements (as ++ bs)
 
-type Elements i = ElementM i ()
-
-instance IxAppend ElementM where
-  type Unit ElementM = '[]
-  type Plus ElementM i j = i ++ j
+instance IxAppend Elements where
   (>>) = EAppend
 
-instance (i ~ '[Type]) => Aeson.ToJSON (ElementM i ()) where
+instance (i ~ '[Type]) => Aeson.ToJSON (Elements i) where
   toJSON els = Aeson.toJSON $ elementsToValues els []
 
-instance (i ~ '[TextObject], a ~ ()) => IsString (ElementM i a) where
-  fromString el = TextObj (fromString el) ()
+instance (i ~ '[TextObject]) => IsString (Elements i) where
+  fromString el = TextObj (fromString el)
 
-instance (i ~ '[TextObject], a ~ ()) => HasText (ElementM i a) where
-  markdown txt = TextObj (markdownObj txt) ()
-  plaintext txt = TextObj (plaintextObj txt) ()
+instance (i ~ '[TextObject]) => HasText (Elements i) where
+  markdown txt = TextObj (markdownObj txt)
+  plaintext txt = TextObj (plaintextObj txt)
 
-instance (i ~ '[ButtonElement], a ~ ()) => HasButton (ElementM i a) where
-  button el = Button el ()
+instance (i ~ '[ButtonElement]) => HasButton (Elements i) where
+  button el = Button el
 
-instance (i ~ '[ImageElement], a ~ ()) => HasImage ImageElement (ElementM i a) where
-  image el = ImageE el ()
+instance (i ~ '[ImageElement]) => HasImage ImageElement (Elements i) where
+  image el = ImageE el
   image_ url alt = image $ defaultImage url alt
 
-instance (i ~ '[SectionFields], a ~ ()) => HasFields (ElementM i a) where
-  fields txts = Fields txts ()
+instance (i ~ '[SectionFields]) => HasFields (Elements i) where
+  fields txts = Fields txts
 
 elementsToValues :: Elements i -> [Aeson.Value] -> [Aeson.Value]
 elementsToValues = go
   where
-    go :: ElementM i b -> [Aeson.Value] -> [Aeson.Value]
-    go (Button e _)  = (Aeson.toJSON e :)
-    go (ImageE e _)  = (Aeson.toJSON e :)
-    go (TextObj e _) = (Aeson.toJSON e :)
-    go (Fields e _)  = (Aeson.toJSON e :)
+    go :: Elements i -> [Aeson.Value] -> [Aeson.Value]
+    go (Button e)  = (Aeson.toJSON e :)
+    go (ImageE e)  = (Aeson.toJSON e :)
+    go (TextObj e) = (Aeson.toJSON e :)
+    go (Fields e)  = (Aeson.toJSON e :)
     go (EAppend x y) = go x . go y
 

@@ -37,27 +37,23 @@ import           Slacker.Blocks.Image
 import           Slacker.Blocks.Section
 import qualified Slacker.Blocks.Section as Section
 
-data BlockM i a where
-  Section :: SectionBlock -> a -> BlockM '[SectionBlock] a
-  Header :: HeaderBlock -> a -> BlockM '[HeaderBlock] a
-  Context :: ContextBlock -> a -> BlockM '[ContextBlock] a
-  Divider :: DividerBlock -> a -> BlockM '[DividerBlock] a
-  Image :: ImageBlock -> a -> BlockM '[ImageBlock] a
-  Actions :: ActionsBlock -> a -> BlockM '[ActionsBlock] a
-  Append :: BlockM as b -> BlockM bs a -> BlockM (as ++ bs) a
+data Blocks i where
+  Section :: SectionBlock -> Blocks '[SectionBlock]
+  Header  :: HeaderBlock -> Blocks '[HeaderBlock]
+  Context :: ContextBlock -> Blocks '[ContextBlock]
+  Divider :: DividerBlock -> Blocks '[DividerBlock]
+  Image   :: ImageBlock -> Blocks '[ImageBlock]
+  Actions :: ActionsBlock -> Blocks '[ActionsBlock]
+  Append  :: Blocks as -> Blocks bs -> Blocks (as ++ bs)
 
-type Blocks i = BlockM i ()
-
-instance IxAppend BlockM where
-  type Unit BlockM = '[]
-  type Plus BlockM i j = i ++ j
+instance IxAppend Blocks where
   (>>) = Append
 
-instance (i ~ '[Type]) => Aeson.ToJSON (BlockM i ()) where
+instance (i ~ '[Type]) => Aeson.ToJSON (Blocks i) where
   toJSON bs = Aeson.toJSON $ blocksToValues bs []
 
-instance (i ~ '[ImageBlock], a ~ ()) => HasImage ImageBlock (BlockM i a) where
-  image el = Image el ()
+instance (i ~ '[ImageBlock]) => HasImage ImageBlock (Blocks i) where
+  image el = Image el
   image_ url alt = image $ defaultImageBlock url alt
 
 type AllBlocks
@@ -72,81 +68,81 @@ type AllBlocks
 blocksToUnion :: Blocks i -> [OpenUnion AllBlocks] -> [OpenUnion AllBlocks]
 blocksToUnion = go
   where
-    go :: BlockM i b -> [OpenUnion AllBlocks] -> [OpenUnion AllBlocks]
-    go (Section b _) = (openUnionLift b :)
-    go (Header b _)  = (openUnionLift b :)
-    go (Context b _) = (openUnionLift b :)
-    go (Actions b _) = (openUnionLift b :)
-    go (Divider b _) = (openUnionLift b :)
-    go (Image b _)   = (openUnionLift b :)
-    go (Append x y)  = go x . go y
+    go :: Blocks i -> [OpenUnion AllBlocks] -> [OpenUnion AllBlocks]
+    go (Section b)  = (openUnionLift b :)
+    go (Header b)   = (openUnionLift b :)
+    go (Context b)  = (openUnionLift b :)
+    go (Actions b)  = (openUnionLift b :)
+    go (Divider b)  = (openUnionLift b :)
+    go (Image b)    = (openUnionLift b :)
+    go (Append x y) = go x . go y
 
 blocksToValues :: Blocks i -> [Aeson.Value] -> [Aeson.Value]
 blocksToValues = go
   where
-    go :: BlockM i b -> [Aeson.Value] -> [Aeson.Value]
-    go (Section b _) = (Aeson.toJSON b :)
-    go (Header b _)  = (Aeson.toJSON b :)
-    go (Context b _) = (Aeson.toJSON b :)
-    go (Actions b _) = (Aeson.toJSON b :)
-    go (Divider b _) = (Aeson.toJSON b :)
-    go (Image b _)   = (Aeson.toJSON b :)
-    go (Append x y)  = go x . go y
+    go :: Blocks i -> [Aeson.Value] -> [Aeson.Value]
+    go (Section b)  = (Aeson.toJSON b :)
+    go (Header b)   = (Aeson.toJSON b :)
+    go (Context b)  = (Aeson.toJSON b :)
+    go (Actions b)  = (Aeson.toJSON b :)
+    go (Divider b)  = (Aeson.toJSON b :)
+    go (Image b)    = (Aeson.toJSON b :)
+    go (Append x y) = go x . go y
 
 section :: SectionBlock -> Blocks '[SectionBlock]
-section s = Section s ()
+section s = Section s
 
 section_
   :: (Contains i (TextObject ': SectionFields ': SectionAccessoryTypes))
   => Elements i
   -> Blocks '[SectionBlock]
-section_ els = Section (go els (defaultSection "")) ()
+section_ els = Section $ go els (defaultSection "")
   where
-    go :: ElementM i b -> SectionBlock -> SectionBlock
-    go (TextObj t _) = \b -> b{ Section.text = t }
-    go (Button bb _) = \b -> b{ accessory = Just $ asAccessory bb }
-    go (ImageE i _)  = \b -> b{ accessory = Just $ asAccessory i }
-    go (Fields fs _) = \b -> b{ fields = Just fs }
+    go :: Elements i -> SectionBlock -> SectionBlock
+    go (TextObj t) = \b -> b{ Section.text = t }
+    go (Button bb) = \b -> b{ accessory = Just $ asAccessory bb }
+    go (ImageE i)  = \b -> b{ accessory = Just $ asAccessory i }
+    go (Fields fs) = \b -> b{ fields = Just fs }
     -- Each accessory in the sequence overrides the next.
     -- TODO Could enforce only one accessory per section at the type level.
     go (EAppend x y) = go y . go x
 
 context :: ContextBlock -> Blocks '[ContextBlock]
-context c = Context c ()
+context c = Context c
 
 context_ :: (Contains i ContextElementTypes) => Elements i -> Blocks '[ContextBlock]
-context_ els = Context (go els emptyContext) ()
+context_ els = Context (go els emptyContext)
   where
-    go :: ElementM i b -> ContextBlock -> ContextBlock
-    go (TextObj t _) =
+    go :: Elements i -> ContextBlock -> ContextBlock
+    go (TextObj t) =
       \b -> b{ Context.elements = asContext t <> Context.elements b }
-    go (ImageE i _) =
+    go (ImageE i ) =
       \b -> b{ Context.elements = asContext i <> Context.elements b }
     go (EAppend x y) = go x . go y
-    go (Fields _ _)  = id
-    go (Button _ _)  = id
+    go (Fields _ )  = id
+    go (Button _ )  = id
 
 header :: HeaderBlock -> Blocks '[HeaderBlock]
-header h = Header h ()
+header h = Header h
 
 header_ :: Text -> Blocks '[HeaderBlock]
-header_ txt = Header (defaultHeader txt) ()
+header_ txt = Header (defaultHeader txt)
 
 actions :: ActionsBlock -> Blocks '[ActionsBlock]
-actions a = Actions a ()
+actions a = Actions a
 
 actions_ :: Contains i ActionsElementTypes => Elements i -> Blocks '[ActionsBlock]
-actions_ els = Actions (go els defaultActions) ()
+actions_ els = Actions $ go els defaultActions
   where
-    go :: ElementM i b -> ActionsBlock -> ActionsBlock
-    go (Button i _)  = \b -> b{ Actions.elements = asAction i : Actions.elements b }
+    go :: Elements i -> ActionsBlock -> ActionsBlock
+    go (Button i)  = \b -> b{ Actions.elements = asAction i : Actions.elements b }
     go (EAppend x y) = go y . go x
-    go (ImageE _ _)  = id
-    go (Fields _ _)  = id
-    go (TextObj _ _) = id
+    go (ImageE _)  = id
+    go (Fields _)  = id
+    go (TextObj _) = id
 
 divider :: DividerBlock -> Blocks '[DividerBlock]
-divider d = Divider d ()
+divider d = Divider d
 
 divider_ :: Blocks '[DividerBlock]
-divider_ = Divider defaultDivider ()
+divider_ = Divider defaultDivider
