@@ -7,6 +7,7 @@ module Slacker.Blocks.Actions
   ) where
 
 import qualified Data.Aeson as Aeson
+import           Data.DList.DNonEmpty (DNonEmpty(..))
 import           Data.Text (Text)
 import           Data.WorldPeace
 import           GHC.Generics (Generic)
@@ -16,14 +17,14 @@ import           Slacker.Util (toJSONWithTypeField)
 
 data ActionsBlock
   = ActionsBlock
-  { elements :: [ActionsElement]
+  { elements :: DNonEmpty ActionsElement
   , block_id :: !(Maybe Text)
   } deriving stock (Generic)
 
-defaultActions :: ActionsBlock
-defaultActions
+defaultActions :: DNonEmpty ActionsElement -> ActionsBlock
+defaultActions els
   = ActionsBlock
-  { elements = []
+  { elements = els
   , block_id = Nothing
   }
 

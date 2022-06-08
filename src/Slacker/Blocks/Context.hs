@@ -5,11 +5,10 @@ module Slacker.Blocks.Context
   , ContextElementTypes
   , asContext
   , defaultContext
-  , emptyContext
   ) where
 
 import qualified Data.Aeson as Aeson
-import           Data.DList (DList(..))
+import           Data.DList.DNonEmpty (DNonEmpty(..))
 import           Data.Text (Text)
 import           Data.WorldPeace
 import           GHC.Exts (IsString(..))
@@ -25,23 +24,16 @@ data ContextBlock
   , block_id :: !(Maybe Text)
   } deriving stock (Generic)
 
-newtype ContextElements = ContextElements (DList ContextElement)
+newtype ContextElements = ContextElements (DNonEmpty ContextElement)
   deriving newtype (Aeson.ToJSON, Semigroup)
 
 instance IsString ContextElements where
-  fromString s = ContextElements . pure $ fromString s
+  fromString s = asContext (fromString s :: TextObject)
 
 defaultContext :: ContextElements -> ContextBlock
 defaultContext els
   = ContextBlock
   { elements = els
-  , block_id = Nothing
-  }
-
-emptyContext :: ContextBlock
-emptyContext
-  = ContextBlock
-  { elements = ContextElements mempty
   , block_id = Nothing
   }
 
@@ -51,15 +43,12 @@ asContext = ContextElements . pure . ContextElement . openUnionLift
 newtype ContextElement = ContextElement (OpenUnion ContextElementTypes)
   deriving newtype (Aeson.ToJSON)
 
-instance IsString ContextElement where
-  fromString s = ContextElement . openUnionLift $ markdownObj (fromString s)
-
 instance HasText ContextElements where
-  markdown txt = ContextElements . pure . ContextElement . openUnionLift $ markdownObj txt
-  plaintext txt = ContextElements . pure . ContextElement . openUnionLift $ plaintextObj txt
+  markdown txt = asContext $ markdownObj txt
+  plaintext txt = asContext $ plaintextObj txt
 
 instance HasImage ImageElement ContextElements where
-  image = ContextElements . pure . ContextElement . openUnionLift
+  image = asContext
   image_ url alt = image $ defaultImage url alt
 
 type ContextElementTypes

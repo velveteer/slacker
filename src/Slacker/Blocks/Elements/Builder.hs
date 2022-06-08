@@ -3,8 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Slacker.Blocks.Elements.Builder
-  ( Elements
-  , Elements(..)
+  ( Elements(..)
   , elementsToValues
   ) where
 
