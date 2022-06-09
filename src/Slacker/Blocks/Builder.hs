@@ -26,7 +26,6 @@ import           Data.Text (Text)
 import           Data.WorldPeace
 
 import           Slacker.Blocks.Actions
-import qualified Slacker.Blocks.Actions as Actions
 import           Slacker.Blocks.Append
 import           Slacker.Blocks.Context
 import           Slacker.Blocks.Divider
@@ -130,7 +129,7 @@ actions = Actions
 actions_ :: Contains i ActionsElementTypes => Elements i -> Blocks '[ActionsBlock]
 actions_ = Actions . defaultActions . go
   where
-    go :: Elements i -> ActionsBlock -> ActionsBlock
+    go :: Elements i -> ActionsElements
     go (Button b)    = asAction b
     go (EAppend x y) = go x <> go y
     go _             = error "impossible action element"

@@ -1,6 +1,7 @@
 module Slacker.Blocks.Actions
   ( ActionsBlock(..)
   , ActionsElement(..)
+  , ActionsElements(..)
   , ActionsElementTypes
   , defaultActions
   , asAction
@@ -17,11 +18,17 @@ import           Slacker.Util (toJSONWithTypeField)
 
 data ActionsBlock
   = ActionsBlock
-  { elements :: DNonEmpty ActionsElement
+  { elements :: !ActionsElements
   , block_id :: !(Maybe Text)
   } deriving stock (Generic)
 
-defaultActions :: DNonEmpty ActionsElement -> ActionsBlock
+newtype ActionsElements = ActionsElements (DNonEmpty ActionsElement)
+  deriving newtype (Aeson.ToJSON, Semigroup)
+
+instance HasButton ActionsElements where
+  button = asAction
+
+defaultActions :: ActionsElements -> ActionsBlock
 defaultActions els
   = ActionsBlock
   { elements = els
@@ -39,12 +46,9 @@ type ActionsElementTypes
   = '[ ButtonElement
      ]
 
-instance HasButton ActionsElement where
-  button = asAction
-
 newtype ActionsElement = ActionsElement (OpenUnion ActionsElementTypes)
   deriving newtype (Aeson.ToJSON)
 
-asAction :: forall a. IsMember a ActionsElementTypes => a -> ActionsElement
-asAction = ActionsElement . openUnionLift
+asAction :: forall a. IsMember a ActionsElementTypes => a -> ActionsElements
+asAction = ActionsElements . pure . ActionsElement . openUnionLift
 

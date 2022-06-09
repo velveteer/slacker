@@ -233,8 +233,7 @@ handleEvents env fn = getNextEvent env >>= \case
   where
     cfg = slackConfig env
 
--- | Returns Nothing when the inbound queue is closed, meaning all
--- listener threads have been shut down.
+-- | Returns Nothing when the inbound queue is closed and empty.
 getNextEvent :: MonadIO m => SocketModeEnv -> m (Maybe SocketModeEvent)
 getNextEvent = liftIO . atomically . readTBMQueue . inboundQueue
 
