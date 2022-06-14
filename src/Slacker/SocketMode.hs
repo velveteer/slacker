@@ -15,9 +15,10 @@ import           Control.Monad (void)
 import           Control.Monad.IO.Unlift (MonadIO, liftIO)
 import           Control.Monad.Logger.Aeson
 import qualified Data.Aeson as Aeson
-import           Data.Foldable (for_, traverse_)
+import           Data.Foldable (traverse_)
 import           Data.Text (Text)
 import qualified Data.Text as T
+import           Data.Traversable (for)
 import           GHC.Generics (Generic)
 import           GHC.IO.Exception
 import           Lens.Micro ((^?))
@@ -71,9 +72,10 @@ initSocketMode cfg = mask_ . runStdoutLoggingT . withLogLevel (logLevel cfg) $ d
   shutdownVar <- liftIO newEmptyTMVarIO
   startVar    <- liftIO newEmptyTMVarIO
   let env = SocketModeEnv cfg iqueue tsTVar refLock shutdownVar startVar
-  for_ [1..numThreads cfg] $ \tId -> do
+  threads <- for [1..numThreads cfg] $ \tId -> do
     t <- liftIO $ asyncWithUnmask (\um -> um $ pollSocket env tId)
-    atomically $ modifyTVar' tsTVar ((t, tId) :)
+    pure (t, tId)
+  void . atomically $ swapTVar tsTVar threads
   void . liftIO $ spawnThreadMonitor env
   void . liftIO $ spawnShutdownHandler env
   liftIO $ gracefulShutdownHandler cfg (shutdownSocketMode env)

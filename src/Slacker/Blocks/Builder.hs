@@ -94,7 +94,7 @@ section_
   :: (Contains i (TextObject ': SectionFields ': SectionAccessoryTypes))
   => Elements i
   -> Blocks '[SectionBlock]
-section_ els = Section $ go els (defaultSection "")
+section_ els = Section $ go els (defaultSection " ")
   where
     go :: Elements i -> SectionBlock -> SectionBlock
     go (TextObj t) = \b -> b{ Section.text = t }
