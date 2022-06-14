@@ -10,8 +10,12 @@ module Slacker.Config
   , setOnException
   , setLogLevel
   , withLogLevel
+  , logStdout
+  , logThread
   ) where
 
+import           Control.Monad.Catch (MonadMask)
+import           Control.Monad.IO.Class (MonadIO)
 import           Control.Monad.Logger.Aeson
   ( LogLevel(..)
   , LoggingT
@@ -98,13 +102,17 @@ setLogLevel lvl sc = sc { logLevel = lvl }
 -- | Logs the error and initiates a graceful shuts down.
 defaultOnException :: SlackConfig -> SomeException -> Int -> IO Bool
 defaultOnException cfg e tId
-  = runStdoutLoggingT
-  . withLogLevel (logLevel cfg)
-  . withThreadContext ["threadId" .= tId] $ do
+  = logThread cfg tId $ do
     logError $ "thread exception" :# ["error" .= show e]
     pure False
 
 withLogLevel :: Maybe LogLevel -> LoggingT m a -> LoggingT m a
 withLogLevel Nothing = filterLogger (\_ _ -> False)
 withLogLevel (Just loglvl) = filterLogger (\_ lvl -> lvl >= loglvl)
+
+logStdout :: SlackConfig -> LoggingT m a -> m a
+logStdout cfg = runStdoutLoggingT . withLogLevel (logLevel cfg)
+
+logThread :: (MonadIO m, MonadMask m) => SlackConfig -> Int -> LoggingT m a -> m a
+logThread cfg tId = logStdout cfg . withThreadContext ["threadId" .= tId]
 

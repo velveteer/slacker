@@ -45,7 +45,7 @@ import           UnliftIO.Exception
 import           UnliftIO.STM
 import qualified Wuss as WS
 
-import           Slacker.Config (SlackConfig(..), withLogLevel)
+import           Slacker.Config (SlackConfig(..), logStdout, logThread)
 import           Slacker.SocketMode.Types as Export
 import           Slacker.Util (assertJust, toJSONText)
 import           Slacker.Web (makeSlackPostJSONNoBody)
@@ -64,7 +64,7 @@ runSocketMode :: MonadIO m => SlackConfig -> (SlackConfig -> SocketModeEvent -> 
 runSocketMode cfg h = liftIO (initSocketMode cfg) >>= flip handleEvents h
 
 initSocketMode :: SlackConfig -> IO SocketModeEnv
-initSocketMode cfg = mask_ . runStdoutLoggingT . withLogLevel (logLevel cfg) $ do
+initSocketMode cfg = mask_ . logStdout cfg $ do
   logDebug "setting up"
   iqueue      <- liftIO $ newTBMQueueIO (inboundQueueMax cfg)
   tsTVar      <- liftIO $ newTVarIO []
@@ -102,10 +102,7 @@ spawnThreadMonitor env = asyncWithUnmask $ \unmask -> unmask loop
       case x of
         Left err | Just AsyncCancelled <- fromException err
                  , Just tId <- lookup stoppedAsync threads -> do
-          runStdoutLoggingT
-            . withThreadContext ["threadId" .= tId]
-            . withLogLevel (logLevel cfg)
-            $ logDebug "thread canceled"
+          logThread cfg tId $ logDebug "thread canceled"
           let newThreads = filter ((/= tId) . snd) threads
           void . atomically $ swapTVar (bgThreads env) newThreads
           loop
@@ -116,9 +113,7 @@ spawnThreadMonitor env = asyncWithUnmask $ \unmask -> unmask loop
             else shutdownSocketMode env
         _ -> do
           -- Polling thread exited normally, which shouldn't ever happen.
-          runStdoutLoggingT
-            . withLogLevel (logLevel cfg)
-            $ logError "a thread exited without exception, we're shutting it all down"
+          logStdout cfg $ logError "a thread exited without exception, we're shutting it all down"
           shutdownSocketMode env
 
 restartFailed :: SocketModeEnv -> [(Async (), Int)] -> Int -> IO ()
@@ -131,22 +126,19 @@ restartFailed env threads tId = mask_ $ do
 -- then restart the connection. This is not the default handler but is included
 -- as an opinionated helper.
 handleThreadExceptionSensibly :: SlackConfig -> SomeException -> Int -> IO Bool
-handleThreadExceptionSensibly cfg ex tId
-  = runStdoutLoggingT
-  . withLogLevel (logLevel cfg)
-  . withThreadContext ["threadId" .= tId] $ do
-    logError $ "thread exception" :# ["error" .= show ex]
-    case fromException ex of
-      Just (ConnectionError (fromException -> (Just (IOError { ioe_type = ResourceVanished })))) ->
-        pure True
-      Just (ConnectionError (fromException -> (Just (IOError { ioe_type = TimeExpired })))) ->
-        pure True
-      Just (ConnectionError (fromException -> Just WS.ConnectionClosed)) ->
-        pure True
-      Just (JSONDecodeError _) ->
-        pure True
-      _ ->
-        pure False
+handleThreadExceptionSensibly cfg ex tId = do
+  logThread cfg tId . logError $ "thread exception" :# ["error" .= show ex]
+  case fromException ex of
+    Just (ConnectionError (fromException -> (Just (IOError { ioe_type = ResourceVanished })))) ->
+      pure True
+    Just (ConnectionError (fromException -> (Just (IOError { ioe_type = TimeExpired })))) ->
+      pure True
+    Just (ConnectionError (fromException -> Just WS.ConnectionClosed)) ->
+      pure True
+    Just (JSONDecodeError _) ->
+      pure True
+    _ ->
+      pure False
 
 -- | Initiates a graceful shutdown.
 shutdownSocketMode :: SocketModeEnv -> IO ()
@@ -156,14 +148,13 @@ shutdownSocketMode env = atomically $ putTMVar (shutdownVar env) ()
 -- When signaled, this cancels all socket threads, waits for them to finish,
 -- and then closes the event queue.
 spawnShutdownHandler :: SocketModeEnv -> IO (Async ())
-spawnShutdownHandler env = asyncWithUnmask $ \_ ->
-  runStdoutLoggingT . withLogLevel (logLevel $ slackConfig env) $ do
-    atomically . takeTMVar $ shutdownVar env
-    logDebug "shutting down"
-    threads <- fmap fst <$> readTVarIO (bgThreads env)
-    uninterruptibleMask_ $ traverse_ uninterruptibleCancel threads
-    traverse_ waitCatch threads
-    atomically $ closeTBMQueue (inboundQueue env)
+spawnShutdownHandler env = asyncWithUnmask $ \_ -> do
+  atomically . takeTMVar $ shutdownVar env
+  logStdout (slackConfig env) $ logDebug "shutting down"
+  threads <- fmap fst <$> readTVarIO (bgThreads env)
+  uninterruptibleMask_ $ traverse_ uninterruptibleCancel threads
+  traverse_ waitCatch threads
+  atomically $ closeTBMQueue (inboundQueue env)
 
 -- | Requests a new socket connection from Slack and blocks on receiving data from that connection.
 -- A socket mode envelope id is used to ack the message immediately, after which the entire value
@@ -172,26 +163,20 @@ spawnShutdownHandler env = asyncWithUnmask $ \_ ->
 -- the outer loop to create a fresh connection.
 -- This should never return unless an IO exception is thrown from the inner or outer loops.
 pollSocket :: SocketModeEnv -> Int -> IO ()
-pollSocket env tId
-  = runStdoutLoggingT
-  . withLogLevel (logLevel cfg)
-  . withThreadContext ["threadId" .= tId] $ do
-    atomically . readTMVar $ startVar env
-    logDebug "opening connection"
-    url <- connectionsOpen env
-    (host, path) <- parseWebSocketUrl url
-    liftIO $ WS.runSecureClient host 443 path go
-    liftIO $ pollSocket env tId
+pollSocket env tId = logThread cfg tId $ do
+  atomically . readTMVar $ startVar env
+  logDebug "opening connection"
+  url <- connectionsOpen env
+  (host, path) <- parseWebSocketUrl url
+  liftIO $ WS.runSecureClient host 443 path go
+  liftIO $ pollSocket env tId
   where
     cfg = slackConfig env
     lock = refreshLock env
     inboundQ = inboundQueue env
-    go conn
-      = runStdoutLoggingT
-      . withLogLevel (logLevel cfg)
-      . withThreadContext ["threadId" .= tId] $ do
-        logDebug "connection receiving data"
-        liftIO $ WS.withPingThread conn 15 (pure ()) (loop conn)
+    go conn = do
+      logStdout cfg $ logDebug "connection receiving data"
+      liftIO $ WS.withPingThread conn 15 (pure ()) (loop conn)
     writeInboundEvent conn val = case val of
       EventsApi (EventsApiEnvelope { eaeEnvelopeId = eId}) -> do
         ackEnvelopeId conn eId
@@ -215,7 +200,7 @@ pollSocket env tId
         -- synchronized via the refresh lock (TMVar).
         atomically $ writeTBMQueue inboundQ val
         unlocked <- atomically $ tryPutTMVar lock ()
-        runStdoutLoggingT . withLogLevel (logLevel cfg) $ logDebug "connection refresh requested"
+        logStdout cfg $ logDebug "connection refresh requested"
         if unlocked then pure () else loop conn
     loop conn = do
       raw <- WS.receiveData conn `catch` (throwIO . ConnectionError)
@@ -249,8 +234,7 @@ connectionsOpen env = do
   let appToken = slackAppToken . slackConfig $ env
       debug = debugDisconnect . slackConfig $ env
   resp <- makeSlackPostJSONNoBody appToken "apps.connections.open"
-  url <- (resp ^? key "url" . _String)
-          `assertJust` "apps.connections.open: No url!"
+  url <- (resp ^? key "url" . _String) `assertJust` "apps.connections.open: No url!"
   pure $ if debug then url <> "&debug_reconnects=true" else url
 
 parseWebSocketUrl :: MonadIO m => T.Text -> m (String, String)
