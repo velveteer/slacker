@@ -12,7 +12,7 @@ import           Data.Kind (Type)
 import           GHC.Exts (IsString(..))
 
 import           Slacker.Blocks.Append
-import           Slacker.Blocks.Section
+import           Slacker.Blocks.Fields
 import           Slacker.Blocks.Elements.Button
 import           Slacker.Blocks.Elements.Image
 import           Slacker.Blocks.Elements.TextObject

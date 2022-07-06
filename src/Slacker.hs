@@ -67,7 +67,7 @@ module Slacker
   , section_
   , SectionFields(..)
   , field
-  , fields
+  , HasFields(..)
   , ImageBlock(..)
   , defaultImageBlock
   , TextObject

@@ -43,6 +43,7 @@ library
     Slacker.Blocks.Actions,
     Slacker.Blocks.Context,
     Slacker.Blocks.Divider,
+    Slacker.Blocks.Fields,
     Slacker.Blocks.Header,
     Slacker.Blocks.Image,
     Slacker.Blocks.Section,
