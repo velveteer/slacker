@@ -20,7 +20,6 @@ This is a work-in-progress, notably it's missing comprehensive types for the lar
 ## Usage
 
 ```haskell
-module Main where
 import Slacker
 
 main :: IO ()
@@ -32,7 +31,7 @@ main = do
 
 handler :: SlackConfig -> SocketModeEvent -> IO ()
 handler cfg = \case
-  Event "app_mention" evt -> print evt
+  Event AppMention{..} -> postMessage cfg $ toChannel channel "yes?"
   _ -> pure ()
 ```
 
