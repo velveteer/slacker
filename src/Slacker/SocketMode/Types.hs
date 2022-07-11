@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Slacker.SocketMode.Types
   ( SocketModeEvent(..)
   , EventsApiEnvelope(..)
@@ -10,12 +12,15 @@ module Slacker.SocketMode.Types
   , AckPayload(..)
   , pattern Command
   , pattern Event
+  , pattern EventResult
+  , pattern EventValue
   , pattern Interactive
   , pattern BlockAction
   ) where
 
 import           Data.Foldable (toList)
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           GHC.Generics (Generic)
@@ -43,8 +48,8 @@ data SocketModeEvent
 -- consistently keep their API specifications updated, which convinces me that
 -- the dynamic approach taken by their Bolt SDKs should also be feasible for
 -- Haskell users. Maybe this library should be called `lack`.
-pattern Event :: Text -> Aeson.Value -> SocketModeEvent
-pattern Event typ event <-
+pattern EventValue :: Text -> Aeson.Value -> SocketModeEvent
+pattern EventValue typ event <-
   EventsApi (
     EventsApiEnvelope
     { eaePayload =
@@ -76,6 +81,29 @@ pattern BlockAction actionId val <-
   InteractiveEvent (
     InteractiveEnvelope
       { iePayload = getEvent -> Just ("block_actions", getAction -> Just (actionId, val))
+    })
+
+-- | This can be used to decode into known data types where you want to handle the result.
+pattern EventResult :: forall a. Aeson.FromJSON a => Either String a -> SocketModeEvent
+pattern EventResult eResult <-
+  EventsApi (
+    EventsApiEnvelope
+    { eaePayload =
+        EventWrapper
+          { ewEvent = Aeson.parseEither (Aeson.parseJSON @a) -> eResult
+          }
+    })
+
+-- | This can be used to decode into known data types where decoding errors
+-- are ignored.
+pattern Event :: forall a. Aeson.FromJSON a => a -> SocketModeEvent
+pattern Event evt <-
+  EventsApi (
+    EventsApiEnvelope
+    { eaePayload =
+        EventWrapper
+          { ewEvent = Aeson.parseEither (Aeson.parseJSON @a) -> Right evt
+          }
     })
 
 getEvent :: Aeson.Value -> Maybe (Text, Aeson.Value)

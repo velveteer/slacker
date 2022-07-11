@@ -33,6 +33,8 @@ module Slacker
   , SocketModeEvent(..)
   , pattern Command
   , pattern Event
+  , pattern EventResult
+  , pattern EventValue
   , pattern Interactive
   , pattern BlockAction
   , EventsApiEnvelope(..)
@@ -40,6 +42,8 @@ module Slacker
   , SlashCommand(..)
   , HelloBody(..)
   , DisconnectBody(..)
+    -- * Events API Payloads
+  , AppMention(..)
     -- * Layout blocks
   , Blocks
   , HeaderBlock(..)
@@ -94,5 +98,6 @@ import           Control.Monad.Logger.Aeson as Export
 
 import           Slacker.Blocks
 import           Slacker.Config
+import           Slacker.Events
 import           Slacker.SocketMode
 import           Slacker.Web

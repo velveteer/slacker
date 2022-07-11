@@ -135,6 +135,8 @@ handleThreadExceptionSensibly cfg ex tId = do
       pure True
     Just (ConnectionError (fromException -> Just WS.ConnectionClosed)) ->
       pure True
+    Just (ConnectionError (fromException -> Just (WS.ParseException _))) ->
+      pure True
     Just (JSONDecodeError _) ->
       pure True
     _ ->

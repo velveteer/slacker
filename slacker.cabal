@@ -53,6 +53,8 @@ library
     Slacker.Blocks.Elements.Image,
     Slacker.Blocks.Elements.TextObject,
     Slacker.Config,
+    Slacker.Events,
+    Slacker.Events.AppMention,
     Slacker.SocketMode,
     Slacker.SocketMode.Types,
     Slacker.Web,
