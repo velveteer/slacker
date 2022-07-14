@@ -108,14 +108,10 @@ executable example-bot
     OverloadedLabels,
     OverloadedStrings
   default-language:    Haskell2010
+  ghc-options: -Wall
   build-depends:
-    aeson,
-    aeson-pretty,
     base,
-    generic-lens,
     microlens,
     microlens-aeson,
     slacker,
-    text,
-    transformers,
     unix

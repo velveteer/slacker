@@ -5,7 +5,6 @@ module Main where
 
 import           Control.Monad (void)
 import           Data.Function ((&))
-import           Data.Text (Text)
 import           Lens.Micro ((^?!))
 import           Lens.Micro.Aeson (_String, key)
 import qualified System.Posix.Signals as Signals

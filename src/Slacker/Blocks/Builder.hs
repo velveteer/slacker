@@ -35,22 +35,22 @@ import           Slacker.Blocks.Image
 import           Slacker.Blocks.Section
 import qualified Slacker.Blocks.Section as Section
 
-data Blocks i where
-  Section :: SectionBlock -> Blocks '[SectionBlock]
-  Header  :: HeaderBlock -> Blocks '[HeaderBlock]
-  Context :: ContextBlock -> Blocks '[ContextBlock]
-  Divider :: DividerBlock -> Blocks '[DividerBlock]
-  Image   :: ImageBlock -> Blocks '[ImageBlock]
-  Actions :: ActionsBlock -> Blocks '[ActionsBlock]
-  Append  :: Blocks as -> Blocks bs -> Blocks (as ++ bs)
+data Blocks i a where
+  Section :: SectionBlock -> Blocks '[SectionBlock] a
+  Header  :: HeaderBlock -> Blocks '[HeaderBlock] a
+  Context :: ContextBlock -> Blocks '[ContextBlock] a
+  Divider :: DividerBlock -> Blocks '[DividerBlock] a
+  Image   :: ImageBlock -> Blocks '[ImageBlock] a
+  Actions :: ActionsBlock -> Blocks '[ActionsBlock] a
+  Append  :: Blocks as a -> Blocks bs b -> Blocks (as ++ bs) c
 
 instance IxAppend Blocks where
   (>>) = Append
 
-instance (i ~ '[Type]) => Aeson.ToJSON (Blocks i) where
+instance (i ~ '[Type], a ~ ()) => Aeson.ToJSON (Blocks i a) where
   toJSON bs = Aeson.toJSON $ blocksToValues bs []
 
-instance (i ~ '[ImageBlock]) => HasImage ImageBlock (Blocks i) where
+instance (i ~ '[ImageBlock], a ~ ()) => HasImage ImageBlock (Blocks i a) where
   image el = Image el
   image_ url alt = image $ defaultImageBlock url alt
 
@@ -63,10 +63,10 @@ type AllBlocks
      , ActionsBlock
      ]
 
-blocksToUnion :: Blocks i -> [OpenUnion AllBlocks] -> [OpenUnion AllBlocks]
+blocksToUnion :: Blocks i () -> [OpenUnion AllBlocks] -> [OpenUnion AllBlocks]
 blocksToUnion = go
   where
-    go :: Blocks i -> [OpenUnion AllBlocks] -> [OpenUnion AllBlocks]
+    go :: Blocks i a -> [OpenUnion AllBlocks] -> [OpenUnion AllBlocks]
     go (Section b)  = (openUnionLift b :)
     go (Header b)   = (openUnionLift b :)
     go (Context b)  = (openUnionLift b :)
@@ -75,10 +75,10 @@ blocksToUnion = go
     go (Image b)    = (openUnionLift b :)
     go (Append x y) = go x . go y
 
-blocksToValues :: Blocks i -> [Aeson.Value] -> [Aeson.Value]
+blocksToValues :: Blocks i () -> [Aeson.Value] -> [Aeson.Value]
 blocksToValues = go
   where
-    go :: Blocks i -> [Aeson.Value] -> [Aeson.Value]
+    go :: Blocks i a -> [Aeson.Value] -> [Aeson.Value]
     go (Section b)  = (Aeson.toJSON b :)
     go (Header b)   = (Aeson.toJSON b :)
     go (Context b)  = (Aeson.toJSON b :)
@@ -87,16 +87,16 @@ blocksToValues = go
     go (Image b)    = (Aeson.toJSON b :)
     go (Append x y) = go x . go y
 
-section :: SectionBlock -> Blocks '[SectionBlock]
+section :: SectionBlock -> Blocks '[SectionBlock] ()
 section = Section
 
 section_
   :: (Contains i (TextObject ': SectionFields ': SectionAccessoryTypes))
-  => Elements i
-  -> Blocks '[SectionBlock]
+  => Elements i ()
+  -> Blocks '[SectionBlock] ()
 section_ els = Section $ go els (defaultSection " ")
   where
-    go :: Elements i -> SectionBlock -> SectionBlock
+    go :: Elements i a -> SectionBlock -> SectionBlock
     go (TextObj t) = \b -> b{ Section.text = t }
     go (Button bb) = \b -> b{ accessory = Just $ asAccessory bb }
     go (ImageE i)  = \b -> b{ accessory = Just $ asAccessory i }
@@ -105,37 +105,37 @@ section_ els = Section $ go els (defaultSection " ")
     -- TODO Could enforce only one accessory per section at the type level.
     go (EAppend x y) = go y . go x
 
-context :: ContextBlock -> Blocks '[ContextBlock]
+context :: ContextBlock -> Blocks '[ContextBlock] ()
 context = Context
 
-context_ :: (Contains i ContextElementTypes) => Elements i -> Blocks '[ContextBlock]
+context_ :: (Contains i ContextElementTypes) => Elements i () -> Blocks '[ContextBlock] ()
 context_ = Context . defaultContext . go
   where
-    go :: Elements i -> ContextElements
+    go :: Elements i a -> ContextElements
     go (TextObj t)   = asContext t
     go (ImageE i )   = asContext i
     go (EAppend x y) = go x <> go y
     go _             = error "impossible context element"
 
-header :: HeaderBlock -> Blocks '[HeaderBlock]
+header :: HeaderBlock -> Blocks '[HeaderBlock] ()
 header = Header
 
-header_ :: Text -> Blocks '[HeaderBlock]
+header_ :: Text -> Blocks '[HeaderBlock] ()
 header_ txt = Header (defaultHeader txt)
 
-actions :: ActionsBlock -> Blocks '[ActionsBlock]
+actions :: ActionsBlock -> Blocks '[ActionsBlock] ()
 actions = Actions
 
-actions_ :: Contains i ActionsElementTypes => Elements i -> Blocks '[ActionsBlock]
+actions_ :: Contains i ActionsElementTypes => Elements i () -> Blocks '[ActionsBlock] ()
 actions_ = Actions . defaultActions . go
   where
-    go :: Elements i -> ActionsElements
+    go :: Elements i a -> ActionsElements
     go (Button b)    = asAction b
     go (EAppend x y) = go x <> go y
     go _             = error "impossible action element"
 
-divider :: DividerBlock -> Blocks '[DividerBlock]
+divider :: DividerBlock -> Blocks '[DividerBlock] ()
 divider = Divider
 
-divider_ :: Blocks '[DividerBlock]
+divider_ :: Blocks '[DividerBlock] ()
 divider_ = Divider defaultDivider

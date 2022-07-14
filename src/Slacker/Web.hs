@@ -122,11 +122,11 @@ messageContentFields mc =
       [ "blocks" Aeson..= val ]
 
 -- | Construct a message as blocks with fallback text
-blocks :: Text -> Blocks i -> MessageContent
+blocks :: Text -> Blocks i () -> MessageContent
 blocks txt bs = MessageBlocks (Just txt) (blocksToUnion bs [])
 
 -- | Construct a message as blocks only
-blocks_ :: Blocks i -> MessageContent
+blocks_ :: Blocks i () -> MessageContent
 blocks_ bs = MessageBlocks Nothing (blocksToUnion bs [])
 
 -- | An escape hatch if you want to use something like `aesonQQ` to write
