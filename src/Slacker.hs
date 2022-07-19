@@ -56,6 +56,7 @@ module Slacker
   , content
   , filepath
   , filesUpload
+  , uploadContent
   , uploadFile
   , uploadJSON
   , uploadJSONText

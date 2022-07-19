@@ -12,6 +12,7 @@ module Slacker.Web.Files
   , filesUpload
   , uploadJSON
   , uploadJSONText
+  , uploadContent
   , uploadFile
   ) where
 
@@ -109,6 +110,19 @@ uploadFile
 uploadFile cfg fp = filesUpload (slackApiToken cfg) fup
   where
     fup = defaultFilesUpload (filepath fp)
+
+-- | Upload text content from memory.
+uploadContent
+  :: (MonadIO m)
+  => SlackConfig
+  -> Text
+  -> Text
+  -> m File
+uploadContent cfg name txt = filesUpload (slackApiToken cfg) fup
+  where
+    fup = (defaultFilesUpload (content txt))
+        { filename = Just name
+        }
 
 -- | Make a files.upload request to the Slack Web API. Requires files:write scope.
 filesUpload
