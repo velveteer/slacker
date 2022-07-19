@@ -19,6 +19,7 @@ module Slacker.Web
     -- * General POST helpers
   , makeSlackPostJSON
   , makeSlackPostJSONNoBody
+  , module Export
   ) where
 
 import           Control.Monad (void)
@@ -40,6 +41,7 @@ import           UnliftIO.Exception
 
 import           Slacker.Blocks
 import           Slacker.Config (SlackConfig(..))
+import           Slacker.Web.Files as Export
 
 data MessagePayload
   = MessagePayload
@@ -199,4 +201,3 @@ makeSlackPostJSONImpl auth method mBody = do
     Just True  -> pure resp
     Just False -> throwIO $ userError $ T.unpack $ resp ^. key "error" . _String
     Nothing    -> throwIO $ userError "Couldn't parse key 'ok' from response"
-

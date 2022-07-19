@@ -58,6 +58,7 @@ library
     Slacker.SocketMode,
     Slacker.SocketMode.Types,
     Slacker.Web,
+    Slacker.Web.Files,
     Slacker.Util
   build-depends:
     aeson                         >= 2.0.3 && < 2.1,

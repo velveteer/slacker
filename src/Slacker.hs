@@ -1,24 +1,13 @@
 module Slacker
-  ( initSocketMode
+  ( -- * Socket Mode
+    initSocketMode
+  , runSocketMode
+  , shutdownSocketMode
   , getNextEvent
   , handleEvents
-  , runSocketMode
-  , postMessage
-  , respondMessage
+    -- * Configuration
   , SlackConfig
   , SocketModeEnv(slackConfig)
-  , ThreadError(..)
-  , MessageContent(..)
-  , blocks
-  , blocksJSON
-  , blocks_
-  , textMessage
-  , MessagePayload(..)
-  , response
-  , ephemeral
-  , PostMessagePayload(..)
-  , toChannel
-  , toThread
   , defaultSlackConfig
   , setApiToken
   , setAppToken
@@ -28,8 +17,8 @@ module Slacker
   , setInboundQueueMax
   , setOnException
   , setLogLevel
-  , shutdownSocketMode
   , handleThreadExceptionSensibly
+  , ThreadError(..)
   , SocketModeEvent(..)
   , pattern Command
   , pattern Event
@@ -44,6 +33,32 @@ module Slacker
   , DisconnectBody(..)
     -- * Events API Payloads
   , AppMention(..)
+    -- * Web API
+  , postMessage
+  , respondMessage
+  , MessageContent(..)
+  , blocks
+  , blocksJSON
+  , blocks_
+  , textMessage
+  , MessagePayload(..)
+  , response
+  , ephemeral
+  , PostMessagePayload(..)
+  , toChannel
+  , toThread
+  -- ** File Uploading
+  , File(..)
+  , FilesUpload(..)
+  , FileContent(..)
+  , FileType(..)
+  , defaultFilesUpload
+  , content
+  , filepath
+  , filesUpload
+  , uploadFile
+  , uploadJSON
+  , uploadJSONText
     -- * Layout blocks
   , Blocks
   , HeaderBlock(..)
