@@ -33,6 +33,7 @@ module Slacker
   , DisconnectBody(..)
     -- * Events API
   , AppMention(..)
+  , Edited(..)
     -- * Web API
   , ApiToken
   , Method
