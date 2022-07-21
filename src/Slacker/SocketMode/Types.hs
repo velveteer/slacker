@@ -130,10 +130,10 @@ instance Aeson.FromJSON SocketModeEvent where
 
 data EventsApiEnvelope
   = EventsApiEnvelope
-  { eaeAcceptsResponsePayload :: !Bool
+  { eaeAcceptsResponsePayload :: !(Maybe Bool)
   , eaeEnvelopeId             :: !Text
-  , eaeRetryAttempt           :: !Int
-  , eaeRetryReason            :: !Text
+  , eaeRetryAttempt           :: !(Maybe Int)
+  , eaeRetryReason            :: !(Maybe Text)
   , eaePayload                :: !EventWrapper
   } deriving stock (Generic, Show, Eq, Ord)
 
@@ -166,7 +166,7 @@ data SlashCommand
   , scCommand             :: !Text
   , scText                :: !Text
   , scApiAppId            :: !Text
-  , scIsEnterpriseInstall :: !Text
+  , scIsEnterpriseInstall :: !(Maybe Text)
   , scResponseUrl         :: !Text
   , scTriggerId           :: !Text
   } deriving stock (Generic, Show, Eq, Ord)
@@ -213,7 +213,7 @@ data Authorization
   = Authorization
   { aEnterpriseId :: !(Maybe Text)
   , aTeamId       :: !(Maybe Text)
-  , aUserId       :: !(Maybe Text)
+  , aUserId       :: !Text
   , aIsBot        :: !Bool
   } deriving stock (Generic, Show, Eq, Ord)
 

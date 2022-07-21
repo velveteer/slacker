@@ -10,7 +10,7 @@ import           Slacker.Util (genericFromJSONWithType)
 
 data AppMention
   = AppMention
-  { user     :: !Text
+  { user     :: !(Maybe Text)
   , text     :: !Text
   , ts       :: !Text
   , channel  :: !Text

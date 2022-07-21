@@ -305,28 +305,31 @@ instance Aeson.FromJSON FileType where
 data File
   = File
   { fileChannels           :: ![Text]
-  , fileCommentsCount      :: !Int
+  , fileCommentsCount      :: !(Maybe Int)
   , fileCreated            :: !Int
   , fileDeanimateGif       :: !(Maybe Text)
   , fileDisplayAsBot       :: !Bool
   , fileEditable           :: !Bool
+  , fileEditLink           :: !(Maybe Text)
   , fileExternalType       :: !Text
   , fileFiletype           :: !FileType
   , fileGroups             :: ![Text]
   , fileHasRichPreview     :: !Bool
   , fileId                 :: !Text
   , fileImageExifRotation  :: !(Maybe Int)
+  , fileInitialComment     :: !(Maybe Text)
   , fileIms                :: ![Text]
   , fileIsExternal         :: !Bool
   , fileIsPublic           :: !Bool
-  , fileIsStarred          :: !Bool
+  , fileIsStarred          :: !(Maybe Bool)
   , fileMimetype           :: !Text
   , fileMode               :: !Text
   , fileName               :: !(Maybe Text)
+  , fileNumStars           :: !(Maybe Int)
   , fileOriginalH          :: !(Maybe Int)
   , fileOriginalW          :: !(Maybe Int)
   , filePermalink          :: !Text
-  , filePermalinkPublic    :: !Text
+  , filePermalinkPublic    :: !(Maybe Text)
   , filePjpeg              :: !(Maybe Text)
   , filePrettyType         :: !Text
   , filePublicUrlShared    :: !Bool
@@ -339,9 +342,9 @@ data File
   , fileThumb64            :: !(Maybe Text)
   , fileThumb80            :: !(Maybe Text)
   , fileTitle              :: !Text
-  , fileUrlPrivate         :: !Text
-  , fileUrlPrivateDownload :: !Text
-  , fileUser               :: !Text
+  , fileUrlPrivate         :: !(Maybe Text)
+  , fileUrlPrivateDownload :: !(Maybe Text)
+  , fileUser               :: !(Maybe Text)
   , fileUsername           :: !Text
   } deriving (Show, Eq, Ord, Generic)
 

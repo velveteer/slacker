@@ -5,18 +5,17 @@ slacker
 
 A Haskell library for building Slack apps particularly in [Socket Mode](https://api.slack.com/apis/connections/socket). It takes a little inspiration from Slack's own Bolt SDK family.
 
-`slacker` is currently lacking comprehensive types for the large amount of objects from the Slack Events API, Web API, and Block Kit. The official Bolt SDK for TypeScript is a better place to find up-to-date static types for Slack objects. This library provides Haskell record types for common use cases, otherwise users are encouraged to parse what they need from `Data.Aeson.Value` payloads using lenses (like with `microlens-aeson`).
+The official [JavaScript Bolt SDK](https://github.com/slackapi/bolt-js/tree/main/src/types) is a better place to find up-to-date static types for the hundreds of Slack API JSON objects. This library provides some Haskell record types for commonly used objects, otherwise users are encouraged to handle `Data.Aeson.Value` payloads using lenses (e.g. `microlens-aeson` or `lens-aeson`).
 
 ## Features
 
-* Supports concurrent socket connections
-* Handles Slack connection refreshes automatically
+* Concurrent socket connections
+* Automatic connection refresh
 * Structured logging
-* Graceful shutdown of socket mode
-* Support for Web API JSON requests
+* Graceful shutdown
+* Web API JSON requests
 * File uploading
-* Format interactive content using Block Kit
-* Follows the latest Slack API conventions and avoids deprecated objects
+* Block Kit DSL
 
 ## Usage
 
