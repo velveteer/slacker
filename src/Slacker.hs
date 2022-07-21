@@ -53,6 +53,10 @@ module Slacker
   , PostMessagePayload(..)
   , toChannel
   , toThread
+  , Channel
+  , Emoji
+  , Timestamp
+  , addReaction
     -- ** File Uploading
   , File(..)
   , FilesUpload(..)

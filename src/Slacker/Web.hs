@@ -16,6 +16,11 @@ module Slacker.Web
   , postMessage
   , toChannel
   , toThread
+    -- * reactions.add
+  , Channel
+  , Emoji
+  , Timestamp
+  , addReaction
     -- * JSON POST helpers
   , ApiToken
   , Method
@@ -158,6 +163,7 @@ respondMessage url body = do
   void . HTTP.httpLBS . HTTP.setRequestBodyJSON body . HTTP.setRequestCheckStatus $ req
 
 -- | Use the chat.postMessage method to send a message to a particular channel.
+-- Requires bot scope of chat:write.
 postMessage
   :: MonadIO m
   => SlackConfig
@@ -170,8 +176,41 @@ postMessage cfg payload =
       "chat.postMessage"
       payload
 
+data ReactionsAddPayload
+  = ReactionsAddPayload
+  { raChannel   :: Channel
+  , raName      :: Emoji
+  , raTimestamp :: Timestamp
+  } deriving (Eq, Show, Generic)
+
+instance Aeson.ToJSON ReactionsAddPayload where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions
+    { Aeson.omitNothingFields = True
+    , Aeson.fieldLabelModifier = Aeson.camelTo2 '_' . drop 2
+    }
+
+type Channel   = Text
+type Emoji     = Text
+type Timestamp = Text
+
+-- | Use the reactions.add method to react to a particular timestamp in a channel.
+-- Requires bot scope of reactions:write.
+addReaction
+  :: MonadIO m
+  => SlackConfig
+  -> Channel
+  -> Timestamp
+  -> Emoji
+  -> m ()
+addReaction cfg cid ts emo =
+  void $
+    makeSlackPostJSON
+      (slackApiToken cfg)
+      "reactions.add"
+      (ReactionsAddPayload cid emo ts)
+
 type ApiToken = Text
-type Method = Text
+type Method   = Text
 
 makeSlackPostJSON
   :: (MonadIO m, Aeson.ToJSON val)
