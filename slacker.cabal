@@ -61,7 +61,7 @@ library
     Slacker.Web.Files,
     Slacker.Util
   build-depends:
-    aeson                         >= 2.0.3 && < 2.1,
+    aeson                         >= 2.0.3 && < 2.2,
     base                          >= 4.14.3 && < 4.17,
     dlist                         >= 1.0 && < 1.1,
     exceptions                    >= 0.10.4 && < 0.11,
