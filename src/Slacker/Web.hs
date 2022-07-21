@@ -194,6 +194,7 @@ type Emoji     = Text
 type Timestamp = Text
 
 -- | Use the reactions.add method to react to a particular timestamp in a channel.
+-- Be careful as this will throw an exception if you add a reaction that already exists.
 -- Requires bot scope of reactions:write.
 addReaction
   :: MonadIO m
