@@ -69,7 +69,7 @@ library
     http-conduit                  >= 2.3.8 && < 2.4,
     microlens                     >= 0.4.12 && < 0.5,
     microlens-aeson               >= 2.4 && < 2.6,
-    monad-logger-aeson            >= 0.2.0 && < 0.3,
+    monad-logger-aeson            >= 0.2.0 && < 0.4,
     network-uri                   >= 2.6.4 && < 2.7,
     stm-chans                     >= 3.0.0 && < 3.1,
     text                          >= 1.2.4 && < 3.0,
