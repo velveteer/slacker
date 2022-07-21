@@ -1,13 +1,13 @@
 module Slacker
   ( -- * Socket Mode
-    initSocketMode
-  , runSocketMode
+    runSocketMode
+  , handleEvents
+  , initSocketMode
   , shutdownSocketMode
   , getNextEvent
-  , handleEvents
-    -- * Configuration
-  , SlackConfig
-  , SocketModeEnv(slackConfig)
+    -- ** Configuration
+  , SlackConfig(..)
+  , SocketModeEnv(..)
   , defaultSlackConfig
   , setApiToken
   , setAppToken
@@ -31,9 +31,14 @@ module Slacker
   , SlashCommand(..)
   , HelloBody(..)
   , DisconnectBody(..)
-    -- * Events API Payloads
+    -- * Events API
   , AppMention(..)
     -- * Web API
+  , ApiToken
+  , Method
+  , makeSlackPostJSON
+  , makeSlackPostJSONNoBody
+    -- ** Messaging
   , postMessage
   , respondMessage
   , MessageContent(..)
@@ -41,26 +46,29 @@ module Slacker
   , blocksJSON
   , blocks_
   , textMessage
-  , MessagePayload(..)
+  , ResponsePayload(..)
   , response
   , ephemeral
+  , textResponse
   , PostMessagePayload(..)
   , toChannel
   , toThread
-  -- ** File Uploading
+    -- ** File Uploading
   , File(..)
   , FilesUpload(..)
   , FileContent(..)
   , FileType(..)
+  , Filename
+  , filesUpload
   , defaultFilesUpload
   , content
   , filepath
-  , filesUpload
   , uploadContent
   , uploadFile
   , uploadJSON
   , uploadJSONText
-    -- * Layout blocks
+    -- * Block Kit
+    -- ** Layout blocks
   , Blocks
   , HeaderBlock(..)
   , defaultHeader
@@ -90,12 +98,13 @@ module Slacker
   , HasFields(..)
   , ImageBlock(..)
   , defaultImageBlock
+    -- ** Composition objects
   , TextObject
   , markdown
   , plaintext
   , embolden
   , italicize
-    -- * Elements
+    -- ** Elements
   , Elements
   , ButtonElement(..)
   , defaultButton
@@ -105,6 +114,7 @@ module Slacker
   , image
   , image_
   , defaultImage
+  -- ** Re-exports
   , module Export
   , IxAppend(..)
   , (!>>)

@@ -1,6 +1,6 @@
 module Slacker.SocketMode
   ( module Export
-  , SocketModeEnv(slackConfig)
+  , SocketModeEnv(..)
   , ThreadError(..)
   , getNextEvent
   , handleEvents
@@ -60,9 +60,14 @@ data SocketModeEnv
   , startVar      :: !(TMVar ())
   } deriving stock (Generic)
 
+-- | Subscribe to events using Socket Mode and handle them
+-- with the given continuation. This function is intended to be run
+-- as a daemon, so it is recommended to catch exceptions in your
+-- event handler and handle OS kill signals with `gracefulShutdownHandler`.
 runSocketMode :: MonadIO m => SlackConfig -> (SlackConfig -> SocketModeEvent -> m ()) -> m ()
 runSocketMode cfg h = liftIO (initSocketMode cfg) >>= flip handleEvents h
 
+-- | Create a `SocketModeEnv` from a `SlackConfig`.
 initSocketMode :: SlackConfig -> IO SocketModeEnv
 initSocketMode cfg = mask_ . logStdout cfg $ do
   logDebug "setting up"

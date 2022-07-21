@@ -1,0 +1,26 @@
+cabal-version:      3.0
+name:               example-app
+version:            0.1.0.0
+category:           Web, Slack, SDK
+synopsis:           Example Slack app using slacker
+license:            MIT
+license-file:       LICENSE
+author:             Josh Miller <notjoshmiller@gmail.com>
+maintainer:         Josh Miller <notjoshmiller@gmail.com>
+extra-source-files: README.md, CHANGELOG.md
+
+executable example-bot
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  default-extensions: 
+    LambdaCase,
+    OverloadedLabels,
+    OverloadedStrings
+  default-language:    Haskell2010
+  ghc-options: -Wall
+  build-depends:
+    base,
+    microlens,
+    microlens-aeson,
+    slacker,
+    unix

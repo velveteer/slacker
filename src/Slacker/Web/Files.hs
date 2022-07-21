@@ -6,6 +6,7 @@ module Slacker.Web.Files
   , FileType(..)
   , File(..)
   , FileContent(..)
+  , Filename
   , content
   , filepath
   , defaultFilesUpload
@@ -69,11 +70,13 @@ content = Content
 filepath :: Text -> FileContent
 filepath = FilePath
 
+type Filename = Text
+
 -- | Short-cut to upload a ToJSON-able type as a file.
 uploadJSON
   :: (Aeson.ToJSON a, MonadIO m)
   => SlackConfig
-  -> Text
+  -> Filename
   -> a
   -> m File
 uploadJSON cfg name json = filesUpload (slackApiToken cfg) fup
@@ -89,7 +92,7 @@ uploadJSON cfg name json = filesUpload (slackApiToken cfg) fup
 uploadJSONText
   :: (MonadIO m)
   => SlackConfig
-  -> Text
+  -> Filename
   -> Text
   -> m File
 uploadJSONText cfg name json = filesUpload (slackApiToken cfg) fup
@@ -115,7 +118,7 @@ uploadFile cfg fp = filesUpload (slackApiToken cfg) fup
 uploadContent
   :: (MonadIO m)
   => SlackConfig
-  -> Text
+  -> Filename
   -> Text
   -> m File
 uploadContent cfg name txt = filesUpload (slackApiToken cfg) fup

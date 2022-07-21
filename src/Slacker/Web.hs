@@ -5,8 +5,8 @@ module Slacker.Web
   , blocks
   , blocksJSON
   , textMessage
-    -- * Response URL
-  , MessagePayload(..)
+    -- * Interaction Response
+  , ResponsePayload(..)
   , respondMessage
   , response
   , textResponse
@@ -16,7 +16,9 @@ module Slacker.Web
   , postMessage
   , toChannel
   , toThread
-    -- * General POST helpers
+    -- * JSON POST helpers
+  , ApiToken
+  , Method
   , makeSlackPostJSON
   , makeSlackPostJSONNoBody
   , module Export
@@ -43,15 +45,15 @@ import           Slacker.Blocks
 import           Slacker.Config (SlackConfig(..))
 import           Slacker.Web.Files as Export
 
-data MessagePayload
-  = MessagePayload
+data ResponsePayload
+  = ResponsePayload
   { mpEphemeral :: !Bool
   , mpContent   :: !MessageContent
   }
   deriving stock (Generic)
 
-instance Aeson.ToJSON MessagePayload where
-  toJSON MessagePayload{..}
+instance Aeson.ToJSON ResponsePayload where
+  toJSON ResponsePayload{..}
     = Aeson.object
     $ catMaybes
     [ if mpEphemeral
@@ -59,20 +61,21 @@ instance Aeson.ToJSON MessagePayload where
         else Nothing
     ] ++ messageContentFields mpContent
 
-instance IsString MessagePayload where
+instance IsString ResponsePayload where
   fromString = textResponse . fromString
 
--- | Turn formatted content into a response payload.
-response :: MessageContent -> MessagePayload
-response = MessagePayload False
+-- | Turn formatted content into a response payload
+response :: MessageContent -> ResponsePayload
+response = ResponsePayload False
 
-textResponse :: Text -> MessagePayload
+-- | Helper to convert text into an interaction text response.
+textResponse :: Text -> ResponsePayload
 textResponse = response . textMessage
 
 -- | Turn formatted content into an ephemeral response.
 -- https://api.slack.com/interactivity/handling#publishing_ephemeral_response
-ephemeral :: MessageContent -> MessagePayload
-ephemeral = MessagePayload True
+ephemeral :: MessageContent -> ResponsePayload
+ephemeral = ResponsePayload True
 
 data PostMessagePayload
   = PostMessagePayload
@@ -137,23 +140,24 @@ blocks_ bs = MessageBlocks Nothing (blocksToUnion bs [])
 blocksJSON :: Aeson.Value -> MessageContent
 blocksJSON = MessageBlocksJSON
 
--- | Construct a text message
+-- | Construct message content from text.
 textMessage :: Text -> MessageContent
 textMessage = MessageText
 
--- | Respond to a user via an action's response URL.
+-- | Respond to an interaction via a response URL.
+-- Slack requires you to respond to an interaction within 30 minutes.
 -- https://api.slack.com/interactivity/handling#message_responses
 respondMessage
   :: MonadIO m
   => Text
   -- ^ Response URL from Slack.
-  -> MessagePayload
+  -> ResponsePayload
   -> m ()
 respondMessage url body = do
   req <- liftIO $ HTTP.parseRequest $ "POST " <> T.unpack url
   void . HTTP.httpLBS . HTTP.setRequestBodyJSON body . HTTP.setRequestCheckStatus $ req
 
--- | Use the `chat.postMessage` method to send a message to a particular channel.
+-- | Use the chat.postMessage method to send a message to a particular channel.
 postMessage
   :: MonadIO m
   => SlackConfig
@@ -166,10 +170,13 @@ postMessage cfg payload =
       "chat.postMessage"
       payload
 
+type ApiToken = Text
+type Method = Text
+
 makeSlackPostJSON
   :: (MonadIO m, Aeson.ToJSON val)
-  => Text
-  -> Text
+  => ApiToken
+  -> Method
   -> val
   -> m Aeson.Value
 makeSlackPostJSON token method body =
@@ -177,16 +184,16 @@ makeSlackPostJSON token method body =
 
 makeSlackPostJSONNoBody
   :: (MonadIO m)
-  => Text
-  -> Text
+  => ApiToken
+  -> Method
   -> m Aeson.Value
 makeSlackPostJSONNoBody token method =
   makeSlackPostJSONImpl token method (Nothing @(Maybe ()))
 
 makeSlackPostJSONImpl
   :: (MonadIO m, Aeson.ToJSON val)
-  => Text
-  -> Text
+  => ApiToken
+  -> Method
   -> Maybe val
   -> m Aeson.Value
 makeSlackPostJSONImpl auth method mBody = do
