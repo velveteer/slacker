@@ -47,3 +47,7 @@ See the [example app](./example-app) for more.
 - [ ] Implement More Event Types
 - [ ] Implement More Block Types
 - [ ] Hackage release
+
+## Slides
+
+Slides for a talk I once gave about this library: https://gist.github.com/velveteer/4e28900021a31c8e75f1a7bb813f0e5f
