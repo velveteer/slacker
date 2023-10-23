@@ -37,7 +37,7 @@ data SlackConfig
   , slackAppToken   :: !Text
   -- ^ App token with connection scope to initiate websocket session
   , numThreads      :: !Int
-  -- ^ Minimum number of subcriber threads to keep open. Defaults to 2. Max of 10.
+  -- ^ Minimum number of subscriber threads to keep open. Defaults to 2. Max of 10.
   , debugDisconnect :: !Bool
   -- ^ When true, forces connection refreshes every 360 seconds.
   , inboundQueueMax :: !Int
@@ -115,4 +115,3 @@ logStdout cfg = runStdoutLoggingT . withLogLevel (logLevel cfg)
 
 logThread :: (MonadIO m, MonadMask m) => SlackConfig -> Int -> LoggingT m a -> m a
 logThread cfg tId = logStdout cfg . withThreadContext ["threadId" .= tId]
-

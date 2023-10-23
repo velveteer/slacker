@@ -144,6 +144,9 @@ handleThreadExceptionSensibly cfg ex tId = do
       pure True
     Just (JSONDecodeError _) ->
       pure True
+    -- Slack sometimes returns 408 responses that should be recoverable
+    Just (ConnectionError (fromException -> Just (WS.MalformedResponse rh _))) | WS.responseCode rh == 408 ->
+      pure True
     _ ->
       pure False
 
